@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { DatabaseModule } from '../src/database.module';
-import { DatabaseSmokeService } from '../src/database-smoke.service';
+import { DatabaseModule } from '../src/db/database.module';
+import { DatabaseSmokeService } from '../src/db/database-smoke.service';
 
 describe('Database smoke', () => {
   let service: DatabaseSmokeService;
