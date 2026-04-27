@@ -1,62 +1,147 @@
-# BDEManager - Readme v0.5
+# BDE Manager
 
-> **Note :** Ce projet est actuellement en phase initiale de conception. Le code n'est pas encore implémenté.
-
----
-
-## L'Équipe
-Voici les membres du groupe travaillant sur ce projet :
-* **Nkunga Jordan**
-* **Worms Loric**
-* **Danois Timéo**
-* **Harmel Wessim**
-* **Augereau Eliott**
+Application web de gestion d'événements étudiants — Next.js 15 · NestJS 10 · PostgreSQL · MongoDB · Redis
 
 ---
 
-## Stack Technique
-Le projet repose sur une architecture moderne et scalable :
+## Équipe & répartition
 
-* **Frontend :** [Next.js](https://nextjs.org/)
-* **Backend :** [NestJS](https://nestjs.com/)
-* **Bases de données :** * **MongoDB** (NoSQL) : Pour la gestion des données flexibles.
-  * **PostgreSQL** (Relationnel) : Pour la structure et l'intégrité des données.
-
----
-
-## Organisation & Développement
-Le projet adopte une approche modulaire. Chaque membre de l'équipe est responsable du développement d'au moins **un microservice ou une feature majeure**, garantissant une répartition équitable des tâches.
-
-### Services Web & NoSQL
-* **Utilisation NoSQL :** MongoDB sera exploité pour [Précisez ici l'usage, ex: stockage des documents/logs].
-* **Services Externes :** Nous prévoyons d'utiliser des services web externes pour [Précisez ici l'usage, ex: authentification, paiement, API tiers].
+| Membre | Feature | Périmètre |
+|---|---|---|
+| **Jordan Nkunga** | Auth + Cache | Register/login JWT, bcrypt, refresh token Redis, guard JWT |
+| **Loric Worms** | Événements CRUD | Création, modification, suppression, inscription à un événement (Prisma/PostgreSQL) |
+| **Timéo Danois** | Paiement | Stripe Checkout Session, webhook, remboursement |
+| **Wessim Harmel** | Notifications & Email | WebSocket temps réel (Socket.io), emails Nodemailer (bienvenue, confirmation, rappel) |
+| **Eliott Augereau** | Frontend | Pages Next.js, i18n (FR/EN), autocomplétion d'adresse (data.gouv.fr), composants UI |
 
 ---
 
-## Roadmap (Étapes du projet)
-L'implémentation suit un ordre logique pour assurer la stabilité du système :
+## Stack
 
-1.  **Conception :** Définition des besoins et modélisation.
-2.  **Réalisation :**
-    * *Étape 1 :* Mise en place et configuration des **bases de données** (MongoDB & PostgreSQL).
-    * *Étape 2 :* Définition de l'**architecture** globale et des communications.
-    * *Étape 3 :* Développement des microservices et du frontend.
-3.  **Production :** Déploiement final.
-
----
-
-## Lancement en local
-Les informations précises pour lancer l'application (commandes, pré-requis) seront ajoutées ici **une fois que le développement aura débuté**.
-
-### Variables d'environnement
-Le projet nécessite des variables d'environnement (clés d'API, accès DB). 
-> **Note :** Ces informations sensibles seront partagées directement à M. Vermonden par mail ou via Teams.
+| Couche | Technologie |
+|---|---|
+| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, next-intl |
+| Backend | NestJS 10, TypeScript, Passport JWT |
+| Base de données principale | PostgreSQL 16 via Prisma ORM |
+| Base de données logs | MongoDB 7 via Mongoose |
+| Cache / sessions | Redis 7 (tokens de rafraîchissement + cache utilisateur) |
+| Paiement | Stripe Checkout |
+| Email | Nodemailer (SMTP) — MailDev en local |
+| Notifications | Socket.io (WebSocket) |
+| Géolocalisation | API Adresse data.gouv.fr (sans clé) |
+| Monorepo | Turborepo |
 
 ---
 
-## Production
-* **URL de Production :** *[En attente de déploiement]*
+## Structure du projet
+
+```
+BDEManager/
+├── apps/
+│   ├── api/                        # NestJS
+│   │   ├── prisma/schema.prisma    # Schéma BDD (User, Event, Registration, Payment)
+│   │   └── src/
+│   │       ├── modules/
+│   │       │   ├── auth/           # Jordan — JWT, bcrypt, Redis refresh
+│   │       │   ├── users/          # Jordan — findById, findByEmail
+│   │       │   ├── events/         # Loric  — CRUD événements
+│   │       │   ├── payments/       # Timéo  — Stripe
+│   │       │   ├── mail/           # Wessim — emails
+│   │       │   ├── notifications/  # Wessim — WebSocket gateway
+│   │       │   └── geo/            # Eliott — proxy data.gouv.fr
+│   │       ├── common/             # Guards, decorators, filtres d'exception
+│   │       └── prisma/             # PrismaService (global)
+│   └── web/                        # Next.js
+│       ├── messages/               # Traductions FR / EN
+│       └── src/app/[locale]/
+│           ├── page.tsx            # Accueil
+│           ├── auth/login/         # Jordan
+│           ├── auth/register/      # Jordan
+│           ├── events/             # Eliott (liste + détail + création)
+│           ├── dashboard/          # Eliott + Wessim (notifs temps réel)
+│           └── checkout/success/   # Timéo
+├── docker-compose.yml              # Postgres + Mongo + Redis + MailDev
+├── .env.example                    # Variables à copier en .env
+└── turbo.json
+```
 
 ---
 
-> _"Le code n'est pas encore là, mais l'ambition, elle, est déjà compilée."_ 💡
+## Démarrage rapide
+
+### Prérequis
+- Node.js ≥ 20
+- Docker Desktop
+
+### 1. Cloner & installer
+```bash
+git clone <url-du-repo>
+cd BDEManager
+npm install
+```
+
+### 2. Variables d'environnement
+```bash
+cp .env.example .env
+# Remplir les valeurs Stripe (clés de test suffisantes en local)
+```
+
+### 3. Lancer les services (BDD, Redis, Mail)
+```bash
+docker compose up -d
+```
+
+### 4. Initialiser la base de données
+```bash
+npm run db:migrate
+```
+
+### 5. Lancer l'application
+```bash
+npm run dev
+# API  → http://localhost:3001/api/v1
+# Web  → http://localhost:3000
+# Mail → http://localhost:1080  (MailDev)
+```
+
+---
+
+## Routes API (aperçu)
+
+| Méthode | Route | Feature | Accès |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | Auth | Public |
+| POST | `/api/v1/auth/login` | Auth | Public |
+| POST | `/api/v1/auth/logout` | Auth | JWT |
+| POST | `/api/v1/auth/refresh` | Auth | Public |
+| GET | `/api/v1/events` | Événements | Public |
+| POST | `/api/v1/events` | Événements | ORGANIZER |
+| PATCH | `/api/v1/events/:id` | Événements | ORGANIZER |
+| DELETE | `/api/v1/events/:id` | Événements | ADMIN |
+| POST | `/api/v1/events/:id/register` | Événements | JWT |
+| POST | `/api/v1/payments/checkout` | Paiement | JWT |
+| POST | `/api/v1/payments/webhook` | Paiement | Stripe |
+| GET | `/api/v1/geo/search?q=` | Géo | JWT |
+
+---
+
+## Variables d'environnement clés
+
+Voir `.env.example` — les variables à renseigner impérativement avant de démarrer :
+
+- `DATABASE_URL` — connexion PostgreSQL
+- `MONGO_URI` — connexion MongoDB
+- `REDIS_PASSWORD` — mot de passe Redis
+- `JWT_SECRET` / `JWT_REFRESH_SECRET` — secrets JWT (**ne jamais committer en clair**)
+- `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — clés Stripe (test)
+- `SMTP_HOST` / `SMTP_PORT` — config email (MailDev en local : `localhost:1025`)
+
+---
+
+## Rôles utilisateur
+
+| Rôle | Droits |
+|---|---|
+| `USER` | S'inscrire à des événements, consulter |
+| `ORGANIZER` | Créer et gérer ses propres événements |
+| `ADMIN` | Accès complet |

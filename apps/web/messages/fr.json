@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "events": "Événements",
+    "login": "Connexion",
+    "register": "Inscription",
+    "dashboard": "Mon espace",
+    "logout": "Déconnexion"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "firstName": "Prénom",
+    "lastName": "Nom"
+  },
+  "events": {
+    "title": "Événements",
+    "create": "Créer un événement",
+    "register": "S'inscrire",
+    "free": "Gratuit",
+    "noEvents": "Aucun événement à venir"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "events": "Events",
+    "login": "Login",
+    "register": "Sign up",
+    "dashboard": "My space",
+    "logout": "Logout"
+  },
+  "auth": {
+    "login": "Sign in",
+    "register": "Create account",
+    "email": "Email address",
+    "password": "Password",
+    "firstName": "First name",
+    "lastName": "Last name"
+  },
+  "events": {
+    "title": "Events",
+    "create": "Create event",
+    "register": "Register",
+    "free": "Free",
+    "noEvents": "No upcoming events"
+  }
+}

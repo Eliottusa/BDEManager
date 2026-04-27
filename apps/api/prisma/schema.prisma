@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ORGANIZER
+  ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  WAITLISTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+// ─── Models ─────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  avatarUrl     String?
+  role          Role      @default(USER)
+  isVerified    Boolean   @default(false)
+  verifyToken   String?
+  resetToken    String?
+  resetTokenExp DateTime?
+
+  organizedEvents Event[]        @relation("OrganizerEvents")
+  registrations   Registration[]
+  payments        Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String?
+  status      EventStatus @default(DRAFT)
+
+  // Location
+  addressLabel  String
+  addressStreet String
+  addressCity   String
+  addressZip    String
+  latitude      Float?
+  longitude     Float?
+
+  // Scheduling
+  startDate DateTime
+  endDate   DateTime
+
+  // Capacity & pricing
+  capacity  Int
+  price     Float   @default(0)
+  isFree    Boolean @default(true)
+
+  organizerId String
+  organizer   User   @relation("OrganizerEvents", fields: [organizerId], references: [id])
+
+  registrations Registration[]
+  payments      Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startDate])
+  @@index([organizerId])
+}
+
+model Registration {
+  id      String             @id @default(cuid())
+  status  RegistrationStatus @default(PENDING)
+  userId  String
+  eventId String
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+
+  payment Payment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  stripePaymentId  String        @unique
+  stripeSessionId  String        @unique
+  amount           Float
+  currency         String        @default("eur")
+  status           PaymentStatus @default(PENDING)
+
+  userId         String
+  eventId        String
+  registrationId String @unique
+
+  user         User         @relation(fields: [userId], references: [id])
+  event        Event        @relation(fields: [eventId], references: [id])
+  registration Registration @relation(fields: [registrationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
