@@ -23,8 +23,13 @@ export class MailService {
     const host = config.get('SMTP_HOST', 'localhost');
     const portValue = Number(config.get('SMTP_PORT', DEFAULT_SMTP_PORT));
     const port = Number.isNaN(portValue) ? DEFAULT_SMTP_PORT : portValue;
-    const user = config.get<string>('SMTP_USER');
-    const pass = config.get<string>('SMTP_PASS');
+    const user = config.get<string>('SMTP_USER')?.trim() ?? '';
+    const pass = config.get<string>('SMTP_PASS') ?? '';
+    const hasUser = user.length > 0;
+    const hasPass = pass.length > 0;
+    if (hasUser !== hasPass) {
+      throw new Error('SMTP_USER and SMTP_PASS must be set together.');
+    }
     this.defaultFrom = config.get(
       'SMTP_FROM',
       'BDE Manager <noreply@bde-manager.fr>',
@@ -34,7 +39,7 @@ export class MailService {
       host,
       port,
       secure: port === 465,
-      auth: user ? { user, pass: pass ?? '' } : undefined,
+      auth: hasUser ? { user, pass } : undefined,
     });
   }
 
