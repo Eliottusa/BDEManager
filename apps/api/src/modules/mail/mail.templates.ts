@@ -156,8 +156,10 @@ export const mailTemplates = {
   welcome: ({ firstName }: WelcomeTemplateData): MailTemplateResult => {
     const greeting = formatGreeting(firstName);
     const subject = 'Bienvenue sur BDE Manager';
-    const contentText = `${greeting}\n\nVotre compte est bien créé. Vous pouvez dès maintenant découvrir les prochains événements et gérer vos inscriptions.`;
-    const contentHtml = `${formatBodyHtml(contentText)}`;
+    const bodyText =
+      'Votre compte est bien créé. Vous pouvez dès maintenant découvrir les prochains événements et gérer vos inscriptions.';
+    const contentText = `${greeting}\n\n${bodyText}`;
+    const contentHtml = `${formatBodyHtml(greeting)}${formatBodyHtml(bodyText)}`;
     return buildTemplate({
       subject,
       heading: 'Bienvenue !',

@@ -10,6 +10,9 @@ import {
   mailTemplates,
 } from './mail.templates';
 
+const DEFAULT_SMTP_PORT = 1025;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 @Injectable()
 export class MailService {
   private readonly transporter: Transporter;
@@ -17,8 +20,8 @@ export class MailService {
 
   constructor(private readonly config: ConfigService) {
     const host = config.get('SMTP_HOST', 'localhost');
-    const portValue = Number(config.get('SMTP_PORT', 1025));
-    const port = Number.isNaN(portValue) ? 1025 : portValue;
+    const portValue = Number(config.get('SMTP_PORT', DEFAULT_SMTP_PORT));
+    const port = Number.isNaN(portValue) ? DEFAULT_SMTP_PORT : portValue;
     const user = config.get<string>('SMTP_USER');
     const pass = config.get<string>('SMTP_PASS');
     this.defaultFrom = config.get(
@@ -58,12 +61,28 @@ export class MailService {
   }
 
   private async send(to: string, template: MailTemplateResult) {
-    await this.transporter.sendMail({
-      to,
-      from: this.defaultFrom,
-      subject: template.subject,
-      html: template.html,
-      text: template.text,
-    });
+    const recipient = to.trim();
+    this.ensureValidEmail(recipient);
+
+    try {
+      await this.transporter.sendMail({
+        to: recipient,
+        from: this.defaultFrom,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to send email to ${recipient} (subject: ${template.subject}): ${message}`,
+      );
+    }
+  }
+
+  private ensureValidEmail(value: string) {
+    if (!EMAIL_PATTERN.test(value)) {
+      throw new Error(`Invalid email address: ${value}`);
+    }
   }
 }
