@@ -11,7 +11,7 @@ import {
 } from './mail.templates';
 
 const DEFAULT_SMTP_PORT = 1025;
-const EMAIL_PATTERN =
+const EMAIL_RFC5322_PATTERN =
   /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 
 @Injectable()
@@ -83,7 +83,7 @@ export class MailService {
   }
 
   private ensureValidEmail(value: string) {
-    if (!EMAIL_PATTERN.test(value)) {
+    if (!EMAIL_RFC5322_PATTERN.test(value)) {
       throw new Error(
         `Invalid email address provided: ${this.formatRecipientForLog(value)}`,
       );
@@ -100,12 +100,16 @@ export class MailService {
     if (!local || !domain) {
       return 'invalid-address';
     }
+    return `${this.maskLocalPart(local)}@${domain}`;
+  }
+
+  private maskLocalPart(local: string) {
     if (local.length === 1) {
-      return `${local}*@${domain}`;
+      return `${local}*`;
     }
     if (local.length === 2) {
-      return `${local[0]}*@${domain}`;
+      return `${local[0]}*`;
     }
-    return `${local.slice(0, 2)}***@${domain}`;
+    return `${local.slice(0, 2)}***`;
   }
 }
