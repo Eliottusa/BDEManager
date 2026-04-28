@@ -218,7 +218,6 @@ export const mailTemplates = {
       contentHtml,
       contentText,
       actionUrl,
-      actionLabel: 'Voir les détails',
     });
   },
   generic: ({
