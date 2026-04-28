@@ -24,11 +24,13 @@ export class MailService {
     const portValue = Number(config.get('SMTP_PORT', DEFAULT_SMTP_PORT));
     const port = Number.isNaN(portValue) ? DEFAULT_SMTP_PORT : portValue;
     const user = config.get<string>('SMTP_USER')?.trim() ?? '';
-    const pass = config.get<string>('SMTP_PASS') ?? '';
+    const pass = config.get<string>('SMTP_PASS')?.trim() ?? '';
     const hasUser = user.length > 0;
     const hasPass = pass.length > 0;
     if (hasUser !== hasPass) {
-      throw new Error('SMTP_USER and SMTP_PASS must be set together.');
+      throw new Error(
+        'SMTP authentication requires both SMTP_USER and SMTP_PASS to be set, or neither.',
+      );
     }
     this.defaultFrom = config.get(
       'SMTP_FROM',
