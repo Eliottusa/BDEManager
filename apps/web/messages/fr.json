@@ -4,7 +4,16 @@
     "login": "Connexion",
     "register": "Inscription",
     "dashboard": "Mon espace",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "admin": "Gestion BDE",
+    "profile": "Mon profil"
+  },
+  "profile": {
+    "title": "Mon profil",
+    "personalInfo": "Informations personnelles",
+    "edit": "Modifier le profil",
+    "save": "Enregistrer les modifications",
+    "role": "Rôle"
   },
   "auth": {
     "login": "Se connecter",
@@ -19,6 +28,16 @@
     "create": "Créer un événement",
     "register": "S'inscrire",
     "free": "Gratuit",
-    "noEvents": "Aucun événement à venir"
+    "noEvents": "Aucun événement à venir",
+    "upcoming": "À venir",
+    "details": "Voir les détails"
+  },
+  "dashboard": {
+    "title": "Mon espace",
+    "welcome": "Bienvenue, {name}",
+    "myRegistrations": "Mes inscriptions",
+    "noRegistrations": "Tu n'as pas encore d'inscriptions.",
+    "notifications": "Notifications",
+    "noNotifications": "Pas de notifications pour le moment."
   }
 }

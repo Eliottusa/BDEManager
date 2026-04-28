@@ -4,7 +4,16 @@
     "login": "Login",
     "register": "Sign up",
     "dashboard": "My space",
-    "logout": "Logout"
+    "logout": "Logout",
+    "admin": "Management",
+    "profile": "Profile"
+  },
+  "profile": {
+    "title": "My Profile",
+    "personalInfo": "Personal Information",
+    "edit": "Edit Profile",
+    "save": "Save Changes",
+    "role": "Role"
   },
   "auth": {
     "login": "Sign in",
@@ -19,6 +28,16 @@
     "create": "Create event",
     "register": "Register",
     "free": "Free",
-    "noEvents": "No upcoming events"
+    "noEvents": "No upcoming events",
+    "upcoming": "Upcoming",
+    "details": "View details"
+  },
+  "dashboard": {
+    "title": "My space",
+    "welcome": "Welcome, {name}",
+    "myRegistrations": "My registrations",
+    "noRegistrations": "You don't have any registrations yet.",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet."
   }
 }

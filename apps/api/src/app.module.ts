@@ -25,10 +25,8 @@ import { GeoModule } from './modules/geo/geo.module';
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         store: await redisStore({
-          socket: {
-            host: config.get('REDIS_HOST', 'localhost'),
-            port: config.get<number>('REDIS_PORT', 6379),
-          },
+          host: config.get('REDIS_HOST', 'localhost'),
+          port: config.get<number>('REDIS_PORT', 6379),
           password: config.get('REDIS_PASSWORD'),
           ttl: config.get<number>('REDIS_TTL', 86400),
         }),
