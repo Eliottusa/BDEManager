@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
+}
+
+// Définition de l'Enum
+enum EventStatus {  
+  OUVERT
+  FERME
+  ANNULE
+  BROUILLON
+  COMPLET
+
+}
+
+// Définition du modèle Event
+model Event {
+  id           Int          @id @default(autoincrement())
+  titre        String
+  description  String?      // Le "?" signifie que c'est optionnel (nullable)
+  lieu         String
+  dateHeure    DateTime
+  capaciteMax  Int
+  prix         Decimal      @db.Decimal(10, 2)
+  statut       EventStatus  @default(OUVERT)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  registrations Registration[]
+}
+
+model Registration {
+  id               Int      @id @default(autoincrement())
+  eventId          Int
+  utilisateurEmail String
+  createdAt        DateTime @default(now())
+  event            Event    @relation(fields: [eventId], references: [id])
+}

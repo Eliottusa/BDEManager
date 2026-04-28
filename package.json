@@ -17,12 +17,16 @@
     "db:studio": "turbo run db:studio --filter=api"
   },
   "devDependencies": {
-    "turbo": "^2.3.3",
     "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1"
   }
 }
