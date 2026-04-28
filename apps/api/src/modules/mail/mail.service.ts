@@ -11,7 +11,8 @@ import {
 } from './mail.templates';
 
 const DEFAULT_SMTP_PORT = 1025;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_PATTERN =
+  /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 
 @Injectable()
 export class MailService {
@@ -63,6 +64,7 @@ export class MailService {
   private async send(to: string, template: MailTemplateResult) {
     const recipient = to.trim();
     this.ensureValidEmail(recipient);
+    const recipientForLog = this.formatRecipientForLog(recipient);
 
     try {
       await this.transporter.sendMail({
@@ -75,14 +77,26 @@ export class MailService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `Failed to send email to ${recipient} (subject: ${template.subject}): ${message}`,
+        `Failed to send email to ${recipientForLog} (subject: ${template.subject}): ${message}`,
       );
     }
   }
 
   private ensureValidEmail(value: string) {
     if (!EMAIL_PATTERN.test(value)) {
-      throw new Error(`Invalid email address: ${value}`);
+      throw new Error(
+        `Invalid email address provided: ${this.formatRecipientForLog(value)}`,
+      );
     }
+  }
+
+  private formatRecipientForLog(value: string) {
+    const [local, domain] = value.split('@');
+    if (!local || !domain) {
+      return 'invalid-address';
+    }
+    const visibleLocal =
+      local.length <= 2 ? `${local[0]}*` : `${local.slice(0, 2)}***`;
+    return `${visibleLocal}@${domain}`;
   }
 }
