@@ -1,147 +1,65 @@
 # BDE Manager
 
-Application web de gestion d'événements étudiants — Next.js 15 · NestJS 10 · PostgreSQL · MongoDB · Redis
+Une plateforme moderne de gestion d'événements pour les Bureaux des Étudiants (BDE).
 
----
+## 🚀 Fonctionnalités
 
-## Équipe & répartition
+- **🌐 Internationalisation** : Support complet Français / Anglais.
+- **🔐 Authentification** : Système complet avec rôles (USER, ORGANIZER, ADMIN).
+- **📅 Gestion d'Événements** : Création, modification et affichage des événements avec autocomplétion d'adresse.
+- **🎫 Billetterie & Inscriptions** : Inscription aux événements avec gestion des places et paiements (Stripe).
+- **📱 Dashboard & Notifications** : Suivi des inscriptions et notifications en temps réel (Socket.io).
+- **🧑‍💻 Mode Mock** : Développez le frontend sans backend grâce à un système de simulation intégré.
 
-| Membre | Feature | Périmètre |
-|---|---|---|
-| **Jordan Nkunga** | Auth + Cache | Register/login JWT, bcrypt, refresh token Redis, guard JWT |
-| **Loric Worms** | Événements CRUD | Création, modification, suppression, inscription à un événement (Prisma/PostgreSQL) |
-| **Timéo Danois** | Paiement | Stripe Checkout Session, webhook, remboursement |
-| **Wessim Harmel** | Notifications & Email | WebSocket temps réel (Socket.io), emails Nodemailer (bienvenue, confirmation, rappel) |
-| **Eliott Augereau** | Frontend | Pages Next.js, i18n (FR/EN), autocomplétion d'adresse (data.gouv.fr), composants UI |
+## 🛠 Stack Technique
 
----
+- **Frontend** : Next.js 15 (App Router), TypeScript, Tailwind CSS, next-intl, Axios.
+- **Backend** : NestJS, PostgreSQL (Prisma), MongoDB (Mongoose), Redis, Socket.io.
+- **Paiements** : Stripe.
 
-## Stack
+## 📥 Installation
 
-| Couche | Technologie |
-|---|---|
-| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, next-intl |
-| Backend | NestJS 10, TypeScript, Passport JWT |
-| Base de données principale | PostgreSQL 16 via Prisma ORM |
-| Base de données logs | MongoDB 7 via Mongoose |
-| Cache / sessions | Redis 7 (tokens de rafraîchissement + cache utilisateur) |
-| Paiement | Stripe Checkout |
-| Email | Nodemailer (SMTP) — MailDev en local |
-| Notifications | Socket.io (WebSocket) |
-| Géolocalisation | API Adresse data.gouv.fr (sans clé) |
-| Monorepo | Turborepo |
-
----
-
-## Structure du projet
-
-```
-BDEManager/
-├── apps/
-│   ├── api/                        # NestJS
-│   │   ├── prisma/schema.prisma    # Schéma BDD (User, Event, Registration, Payment)
-│   │   └── src/
-│   │       ├── modules/
-│   │       │   ├── auth/           # Jordan — JWT, bcrypt, Redis refresh
-│   │       │   ├── users/          # Jordan — findById, findByEmail
-│   │       │   ├── events/         # Loric  — CRUD événements
-│   │       │   ├── payments/       # Timéo  — Stripe
-│   │       │   ├── mail/           # Wessim — emails
-│   │       │   ├── notifications/  # Wessim — WebSocket gateway
-│   │       │   └── geo/            # Eliott — proxy data.gouv.fr
-│   │       ├── common/             # Guards, decorators, filtres d'exception
-│   │       └── prisma/             # PrismaService (global)
-│   └── web/                        # Next.js
-│       ├── messages/               # Traductions FR / EN
-│       └── src/app/[locale]/
-│           ├── page.tsx            # Accueil
-│           ├── auth/login/         # Jordan
-│           ├── auth/register/      # Jordan
-│           ├── events/             # Eliott (liste + détail + création)
-│           ├── dashboard/          # Eliott + Wessim (notifs temps réel)
-│           └── checkout/success/   # Timéo
-├── docker-compose.yml              # Postgres + Mongo + Redis + MailDev
-├── .env.example                    # Variables à copier en .env
-└── turbo.json
-```
-
----
-
-## Démarrage rapide
-
-### Prérequis
-- Node.js ≥ 20
-- Docker Desktop
-
-### 1. Cloner & installer
+### 1. Cloner le projet
 ```bash
-git clone <url-du-repo>
-cd BDEManager
+git clone https://github.com/votre-repo/bdemanager.git
+cd bdemanager
+```
+
+### 2. Installer les dépendances
+```bash
 npm install
 ```
 
-### 2. Variables d'environnement
-```bash
-cp .env.example .env
-# Remplir les valeurs Stripe (clés de test suffisantes en local)
-```
+### 3. Configurer les variables d'environnement
+Copiez le fichier `.env.example` en `.env` à la racine et dans `apps/web/.env.local`.
 
-### 3. Lancer les services (BDD, Redis, Mail)
+### 4. Lancer le projet en mode développement
 ```bash
-docker compose up -d
-```
-
-### 4. Initialiser la base de données
-```bash
-npm run db:migrate
-```
-
-### 5. Lancer l'application
-```bash
+# Lancer tout le projet (API + Web)
 npm run dev
-# API  → http://localhost:3001/api/v1
-# Web  → http://localhost:3000
-# Mail → http://localhost:1080  (MailDev)
+
+# Lancer uniquement le web (avec mode Mock)
+cd apps/web
+npm run dev
 ```
 
----
+## 🧪 Mode Mock (Frontend)
 
-## Routes API (aperçu)
+Pour travailler sur le frontend sans que l'API ne soit lancée, activez le mode Mock dans `apps/web/.env.local` :
+```env
+NEXT_PUBLIC_MOCK_AUTH=true
+```
+Ce mode simule :
+- Un utilisateur connecté par défaut.
+- Des listes d'événements et des inscriptions factices.
+- Des succès sur les formulaires de création et d'inscription.
 
-| Méthode | Route | Feature | Accès |
-|---|---|---|---|
-| POST | `/api/v1/auth/register` | Auth | Public |
-| POST | `/api/v1/auth/login` | Auth | Public |
-| POST | `/api/v1/auth/logout` | Auth | JWT |
-| POST | `/api/v1/auth/refresh` | Auth | Public |
-| GET | `/api/v1/events` | Événements | Public |
-| POST | `/api/v1/events` | Événements | ORGANIZER |
-| PATCH | `/api/v1/events/:id` | Événements | ORGANIZER |
-| DELETE | `/api/v1/events/:id` | Événements | ADMIN |
-| POST | `/api/v1/events/:id/register` | Événements | JWT |
-| POST | `/api/v1/payments/checkout` | Paiement | JWT |
-| POST | `/api/v1/payments/webhook` | Paiement | Stripe |
-| GET | `/api/v1/geo/search?q=` | Géo | JWT |
+## 📁 Structure du Projet
 
----
+- `apps/api` : Serveur NestJS (API REST & WebSockets).
+- `apps/web` : Application Next.js (Client).
+- `packages/` : Partage de configurations et types (à venir).
 
-## Variables d'environnement clés
+## 📝 License
 
-Voir `.env.example` — les variables à renseigner impérativement avant de démarrer :
-
-- `DATABASE_URL` — connexion PostgreSQL
-- `MONGO_URI` — connexion MongoDB
-- `REDIS_PASSWORD` — mot de passe Redis
-- `JWT_SECRET` / `JWT_REFRESH_SECRET` — secrets JWT (**ne jamais committer en clair**)
-- `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — clés Stripe (test)
-- `SMTP_HOST` / `SMTP_PORT` — config email (MailDev en local : `localhost:1025`)
-
----
-
-## Rôles utilisateur
-
-| Rôle | Droits |
-|---|---|
-| `USER` | S'inscrire à des événements, consulter |
-| `ORGANIZER` | Créer et gérer ses propres événements |
-| `ADMIN` | Accès complet |
+Distribué sous la licence MIT.
