@@ -24,7 +24,7 @@ export class MailService {
     const portValue = Number(config.get('SMTP_PORT', DEFAULT_SMTP_PORT));
     const port = Number.isNaN(portValue) ? DEFAULT_SMTP_PORT : portValue;
     const user =
-      // SMTP usernames should not include surrounding whitespace.
+      // Trim to avoid auth failures when env vars include copy/paste whitespace.
       config.get<string>('SMTP_USER')?.trim() ?? '';
     const pass = config.get<string>('SMTP_PASS') ?? '';
     const hasUser = user.length > 0;
@@ -32,7 +32,7 @@ export class MailService {
     if (hasUser !== hasPass) {
       const missing = hasUser ? 'SMTP_PASS' : 'SMTP_USER';
       throw new Error(
-        `SMTP authentication configuration error: ${missing} is missing.`,
+        `SMTP authentication configuration error: ${missing} is missing. Both SMTP_USER and SMTP_PASS must be provided together, or both omitted for unauthenticated connections.`,
       );
     }
     this.defaultFrom = config.get(
