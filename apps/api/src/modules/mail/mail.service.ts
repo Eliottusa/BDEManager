@@ -91,12 +91,21 @@ export class MailService {
   }
 
   private formatRecipientForLog(value: string) {
-    const [local, domain] = value.split('@');
+    const atIndex = value.lastIndexOf('@');
+    if (atIndex <= 0 || atIndex === value.length - 1) {
+      return 'invalid-address';
+    }
+    const local = value.slice(0, atIndex);
+    const domain = value.slice(atIndex + 1);
     if (!local || !domain) {
       return 'invalid-address';
     }
-    const visibleLocal =
-      local.length <= 2 ? `${local[0]}*` : `${local.slice(0, 2)}***`;
-    return `${visibleLocal}@${domain}`;
+    if (local.length === 1) {
+      return `${local}*@${domain}`;
+    }
+    if (local.length === 2) {
+      return `${local[0]}*@${domain}`;
+    }
+    return `${local.slice(0, 2)}***@${domain}`;
   }
 }
