@@ -17,6 +17,8 @@
     "db:studio": "turbo run db:studio --filter=api"
   },
   "devDependencies": {
+    "next": "^15.1.0",
+    "rxjs": "^7.8.1",
     "turbo": "^2.3.3",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2"
@@ -24,5 +26,9 @@
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "overrides": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19"
   }
 }

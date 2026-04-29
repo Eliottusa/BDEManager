@@ -1,6 +1,6 @@
 # BDE Manager
 
-Application web de gestion d'événements étudiants — Next.js 15 · NestJS 10 · PostgreSQL · MongoDB · Redis
+Application web de gestion d'événements étudiants — Next.js 15 · NestJS 10 · PostgreSQL · Redis
 
 ---
 
@@ -23,7 +23,6 @@ Application web de gestion d'événements étudiants — Next.js 15 · NestJS 10
 | Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, next-intl |
 | Backend | NestJS 10, TypeScript, Passport JWT |
 | Base de données principale | PostgreSQL 16 via Prisma ORM |
-| Base de données logs | MongoDB 7 via Mongoose |
 | Cache / sessions | Redis 7 (tokens de rafraîchissement + cache utilisateur) |
 | Paiement | Stripe Checkout |
 | Email | Nodemailer (SMTP) — MailDev en local |
@@ -60,7 +59,7 @@ BDEManager/
 │           ├── events/             # Loric (UI) — Jordan (backend)
 │           ├── dashboard/          # Loric (UI) + Wessim (notifs temps réel)
 │           └── checkout/success/   # Loric (UI) — Timéo (backend)
-├── docker-compose.yml              # Postgres + Mongo + Redis + MailDev
+├── docker-compose.yml              # Postgres + Redis + MailDev
 ├── .env.example                    # Variables à copier en .env
 └── turbo.json
 ```
@@ -130,7 +129,6 @@ npm run dev
 Voir `.env.example` — les variables à renseigner impérativement avant de démarrer :
 
 - `DATABASE_URL` — connexion PostgreSQL
-- `MONGO_URI` — connexion MongoDB
 - `REDIS_PASSWORD` — mot de passe Redis
 - `JWT_SECRET` / `JWT_REFRESH_SECRET` — secrets JWT (**ne jamais committer en clair**)
 - `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — clés Stripe (test)
