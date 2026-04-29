@@ -23,8 +23,19 @@ export default function AddressAutocomplete({ onSelect, placeholder = 'Recherche
 
   const search = useCallback((q: string) => {
     if (q.length < 3) { setSuggestions([]); setOpen(false); return; }
+
+    if (process.env.NEXT_PUBLIC_MOCK_AUTH === 'true') {
+      const mock: GeoResult[] = [
+        { label: `${q} - 1 Rue de la Paix, Paris`, city: 'Paris', postcode: '75001', lat: 48.8698, lon: 2.3309 },
+        { label: `${q} - 12 Avenue Victor Hugo, Lyon`, city: 'Lyon', postcode: '69002', lat: 45.7676, lon: 4.8344 },
+      ];
+      setSuggestions(mock);
+      setOpen(true);
+      return;
+    }
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    fetch(`http://localhost:3001/api/v1/geo/search?q=${encodeURIComponent(q)}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'}/geo/search?q=${encodeURIComponent(q)}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => r.json())
