@@ -14,7 +14,7 @@ import { GeoModule } from './modules/geo/geo.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
+    ConfigModule.forRoot({ isGlobal: true }),
 
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
 
