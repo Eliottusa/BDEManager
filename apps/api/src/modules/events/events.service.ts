@@ -33,13 +33,8 @@ export class EventsService {
   async createEvent(data: any) {
     return this.prisma.event.create({
       data: {
-        title: data.title,
-        description: data.description,
+        ...data,
         status: data.status || EventStatus.BROUILLON,
-        addressLabel: data.addressLabel,
-        addressStreet: data.addressStreet,
-        addressCity: data.addressCity,
-        addressZip: data.addressZip,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         capacity: data.capacity,
