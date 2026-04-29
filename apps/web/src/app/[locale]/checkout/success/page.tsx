@@ -2,17 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import Link from 'next/link';
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
+  const locale = useLocale();
   const [verified, setVerified] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!sessionId) { setVerified(false); return; }
     const token = localStorage.getItem('accessToken');
-    fetch(`http://localhost:3001/api/v1/payments/verify?session_id=${sessionId}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'}/payments/verify?session_id=${sessionId}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => setVerified(r.ok))
@@ -34,7 +36,7 @@ export default function CheckoutSuccessPage() {
               Ton inscription est validée. Tu recevras un email de confirmation.
             </p>
             <Link
-              href="/dashboard"
+              href={`/${locale}/dashboard`}
               className="inline-block rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Voir mon espace
@@ -50,7 +52,7 @@ export default function CheckoutSuccessPage() {
               Une erreur est survenue. Contacte le BDE si le problème persiste.
             </p>
             <Link
-              href="/events"
+              href={`/${locale}/events`}
               className="inline-block rounded-lg bg-gray-200 px-6 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
             >
               Retour aux événements

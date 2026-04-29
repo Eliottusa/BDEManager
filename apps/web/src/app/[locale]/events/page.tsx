@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface Event {
   id: string;
@@ -19,6 +20,8 @@ interface Event {
 export default function EventsPage() {
   const t = useTranslations('events');
   const locale = useLocale();
+  const { isAuthenticated, user } = useAuth();
+  const canCreate = isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'ORGANIZER');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,15 +54,17 @@ export default function EventsPage() {
           <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
           <p className="mt-2 text-sm text-gray-500">Découvrez et participez aux événements de votre BDE.</p>
         </div>
-        <Link
-          href={`/${locale}/events/create`}
-          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition"
-        >
-          <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          {t('create')}
-        </Link>
+        {canCreate && (
+          <Link
+            href={`/${locale}/events/create`}
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition"
+          >
+            <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            {t('create')}
+          </Link>
+        )}
       </div>
 
       {events.length === 0 ? (

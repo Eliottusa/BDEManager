@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthState } from '../types/auth';
 import api from '../lib/api';
 import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: true,
   });
   const router = useRouter();
+  const locale = useLocale();
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -35,7 +37,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem('accessToken');
 
       if (isMockEnabled) {
-        // Force mock session if enabled
         setState({
           user: MOCK_USER,
           accessToken: 'mock-token',
@@ -51,12 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        // In a real scenario, you might have a /me endpoint
-        // const res = await api.get('/auth/me');
-        // For now, let's assume if token exists, we are "authenticated"
-        // and would normally fetch the user profile.
+        const res = await api.get('/auth/me');
         setState({
-          user: null, // Should be fetched from API
+          user: res.data,
           accessToken: token,
           isAuthenticated: true,
           isLoading: false,
@@ -84,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: true,
         isLoading: false,
       });
-      router.push('/dashboard');
+      router.push(`/${locale}/dashboard`);
       return;
     }
 
@@ -98,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: true,
         isLoading: false,
       });
-      router.push('/dashboard');
+      router.push(`/${locale}/dashboard`);
     } catch (error) {
       console.error('Login failed', error);
       throw error;
@@ -113,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: false,
       isLoading: false,
     });
-    router.push('/auth/login');
+    router.push(`/${locale}/auth/login`);
   };
 
   return (
