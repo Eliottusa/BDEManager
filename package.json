@@ -13,8 +13,8 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "db:migrate": "turbo run db:migrate --filter=api",
-    "db:studio": "turbo run db:studio --filter=api"
+    "db:migrate": "turbo run db:migrate --filter=@bde/api",
+    "db:studio": "turbo run db:studio --filter=@bde/api"
   },
   "devDependencies": {
     "next": "^15.1.0",

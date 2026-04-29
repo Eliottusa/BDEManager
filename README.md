@@ -60,7 +60,6 @@ BDEManager/
 │           ├── dashboard/          # Loric (UI) + Wessim (notifs temps réel)
 │           └── checkout/success/   # Loric (UI) — Timéo (backend)
 ├── docker-compose.yml              # Postgres + Redis + MailDev
-├── .env.example                    # Variables à copier en .env
 └── turbo.json
 ```
 
@@ -81,8 +80,9 @@ npm install
 
 ### 2. Variables d'environnement
 ```bash
-cp .env.example .env
-# Remplir les valeurs Stripe (clés de test suffisantes en local)
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.local.example apps/web/.env.local
+# Remplir les valeurs Stripe dans chaque fichier (clés de test suffisantes en local)
 ```
 
 ### 3. Lancer les services (BDD, Redis, Mail)
@@ -126,13 +126,18 @@ npm run dev
 
 ## Variables d'environnement clés
 
-Voir `.env.example` — les variables à renseigner impérativement avant de démarrer :
+Chaque app a son propre fichier d'environnement :
 
+**`apps/api/.env`** (secrets serveur — ne jamais committer)
 - `DATABASE_URL` — connexion PostgreSQL
 - `REDIS_PASSWORD` — mot de passe Redis
-- `JWT_SECRET` / `JWT_REFRESH_SECRET` — secrets JWT (**ne jamais committer en clair**)
+- `JWT_SECRET` / `JWT_REFRESH_SECRET` — secrets JWT
 - `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — clés Stripe (test)
 - `SMTP_HOST` / `SMTP_PORT` — config email (MailDev en local : `localhost:1025`)
+
+**`apps/web/.env.local`** (vars publiques Next.js)
+- `NEXT_PUBLIC_API_URL` — URL de l'API
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — clé publique Stripe
 
 ---
 
