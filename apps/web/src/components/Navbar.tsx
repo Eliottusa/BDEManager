@@ -115,6 +115,15 @@ export default function Navbar() {
             </Link>
             {isAuthenticated ? (
               <>
+                {(user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
+                  <Link
+                    href={`/${locale}/events/create`}
+                    className="block rounded-md px-3 py-2 text-base font-medium text-blue-600 hover:bg-blue-50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t('admin')}
+                  </Link>
+                )}
                 <Link
                   href={`/${locale}/dashboard`}
                   className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600"
