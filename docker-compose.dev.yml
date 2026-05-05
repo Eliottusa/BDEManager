@@ -1,0 +1,99 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bde_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bde}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_DB: ${POSTGRES_DB:-bdemanager}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-bde} -d ${POSTGRES_DB:-bdemanager}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: bde_redis_dev
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-secret}
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--pass', '${REDIS_PASSWORD:-secret}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  maildev:
+    image: maildev/maildev
+    container_name: bde_maildev_dev
+    restart: unless-stopped
+    ports:
+      - '1080:1080'
+      - '1025:1025'
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: bde_api_dev
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm --workspace @bde/api run db:generate && npm --workspace @bde/api run dev"
+    env_file:
+      - ./apps/api/.env
+    environment:
+      # Container networking overrides
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bde}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-bdemanager}?schema=public
+      REDIS_HOST: redis
+      SMTP_HOST: maildev
+      # Improves file watching reliability on Windows bind mounts
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      maildev:
+        condition: service_started
+    volumes:
+      - ./apps/api:/app/apps/api
+      - node_modules:/app/node_modules
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: bde_web_dev
+    restart: unless-stopped
+    working_dir: /app
+    command: npm --workspace @bde/web run dev
+    env_file:
+      - ./apps/web/.env
+    environment:
+      # Improves file watching reliability on Windows bind mounts
+      CHOKIDAR_USEPOLLING: 'true'
+      WATCHPACK_POLLING: 'true'
+    ports:
+      - '3000:3000'
+    depends_on:
+      api:
+        condition: service_started
+    volumes:
+      - ./apps/web:/app/apps/web
+      - node_modules:/app/node_modules
+
+volumes:
+  postgres_data:
+  redis_data:
+  node_modules:

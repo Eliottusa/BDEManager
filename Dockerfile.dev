@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Match the repo's packageManager (npm@11.11.0)
+RUN npm i -g npm@11.11.0
+
+# Copy only what's needed to install workspaces deps
+COPY package.json package-lock.json turbo.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+
+# Prisma client generation may need the schema during postinstall
+COPY apps/api/prisma ./apps/api/prisma
+
+RUN npm ci
+
+# Workaround: package-lock generated on Windows usually doesn't include Linux optional deps
+# needed by next-intl's @swc/core at runtime in Alpine.
+RUN npm i --no-save --no-package-lock --legacy-peer-deps @swc/core-linux-x64-musl@1.15.32
+
+# Source code is mounted at runtime (bind mount) for dev hot-reload
