@@ -119,7 +119,7 @@ model Registration {
 
 model Payment {
   id               String        @id @default(cuid())
-  stripePaymentId  String        @unique
+  stripePaymentId  String?       @unique
   stripeSessionId  String        @unique
   amount           Float
   currency         String        @default("eur")
