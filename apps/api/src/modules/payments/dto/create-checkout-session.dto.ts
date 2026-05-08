@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class CreateCheckoutSessionDto {
   @IsNotEmpty()
@@ -12,10 +12,4 @@ export class CreateCheckoutSessionDto {
   @IsNotEmpty()
   @IsString()
   cancelUrl: string;
-}
-
-export class PaymentResponseDto {
-  paymentId: string;
-  checkoutSessionId: string;
-  url: string;
 }

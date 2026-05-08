@@ -1,7 +1,8 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateCheckoutSessionDto, PaymentResponseDto } from './dto';
+import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
+import { PaymentResponseDto } from './dto/payment-response.dto';
 
 @Injectable()
 export class PaymentsService {
@@ -39,6 +40,9 @@ export class PaymentsService {
 
       // Vérifier que l'inscription n'a pas déjà un paiement en cours/confirmé
       if (registration.payment) {
+        // TODO : Si paiement en cours, recup sont url et la renvoiyer
+        // TODO : Si paiement confirmé ? renvoyer vers l'url de succed directement ? recall l'api inscription
+        // TODO : que faire si le paiement est fail ? il faut autorisé plusieurs paiement par inscription, remplacer le paiement ou autre ?
         throw new BadRequestException('Payment already exists for this registration');
       }
 
@@ -156,10 +160,14 @@ export class PaymentsService {
     }
 
     // Traiter les événements checkout
+    // Paiement réussi via Checkout 
     if (event.type === 'checkout.session.completed') {
       await this.handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
     }
 
+    // TODO Paiement abandonné via Checkout : checkout.session.expired
+
+    // double check, payment succeeded 
     if (event.type === 'payment_intent.succeeded') {
       await this.handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
     }
@@ -191,6 +199,8 @@ export class PaymentsService {
       return;
     }
 
+    // todo check si pas failed
+
     // Mettre à jour le paiement
     await this.prisma.payment.update({
       where: { id: payment.id },
@@ -203,12 +213,13 @@ export class PaymentsService {
     });
 
     // Si le paiement est confirmé, mettre à jour l'inscription
+    // TODO Verifier que le montant payer est le meme que le montant du paiement.
     if (session.payment_status === 'paid') {
       await this.confirmPaymentInRegistration(registrationId, payment.id);
     }
   }
 
-  // Traite l'événement payment_intent.succeeded suite au webhook
+  // Traite l'événement payment_intent.succeeded
   private async handlePaymentIntentSucceeded(intent: Stripe.PaymentIntent) {
     const registrationId = intent.metadata?.registrationId;
 
@@ -225,11 +236,17 @@ export class PaymentsService {
       throw new BadRequestException(`Payment not found for intent ${intent.id}`);
     }
 
+    // TODO verifier que le paiement est pending
+
     // Vérifier l'idempotence
     if (payment.status === 'PAID') {
       this.logger.debug(`Payment ${payment.id} already processed from intent`);
       return;
     }
+    // todo verifier qu'il est pas failed
+
+
+    // TODO Verifier que le montant payer est le meme que le montant du paiement.
 
     await this.prisma.payment.update({
       where: { id: payment.id },
@@ -240,7 +257,7 @@ export class PaymentsService {
     await this.confirmPaymentInRegistration(registrationId, payment.id);
   }
 
-  // Traite l'événement payment_intent.payment_failed suite au webhook
+  // Traite l'événement payment_intent.payment_failed
   private async handlePaymentIntentFailed(intent: Stripe.PaymentIntent) {
     const registrationId = intent.metadata?.registrationId;
 
@@ -248,6 +265,8 @@ export class PaymentsService {
       this.logger.warn(`No registrationId in failed intent metadata for intent ${intent.id}`);
       throw new BadRequestException('Missing registrationId in failed intent metadata');
     }
+
+    // todo verifier que le paiement est en pending
 
     // Trouver et mettre à jour le Payment
     const payment = await this.getPaymentByStripeIntentId(intent.id);

@@ -8,7 +8,8 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
-import { CreateCheckoutSessionDto, PaymentResponseDto } from './dto';
+import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
+import { PaymentResponseDto } from './dto/payment-response.dto';
 
 @Controller('payments')
 export class PaymentsController {
