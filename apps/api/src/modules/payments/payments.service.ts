@@ -123,13 +123,17 @@ export class PaymentsService {
 
   // Traite le webhook Stripe et met à jour le statut du paiement
   async handleWebhook(
-    rawBody: Buffer | string,
+    rawBody: Buffer,
     signature: string,
   ): Promise<void> {
     let event: Stripe.Event;
 
     try {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      this.logger.debug(`Webhook secret from env: ${webhookSecret ? 'SET' : 'NOT SET'}`);
+      this.logger.debug(`Signature: ${signature}`);
+      this.logger.debug(`RawBody type: ${typeof rawBody}, is Buffer: ${Buffer.isBuffer(rawBody)}`);
+      
       if (!webhookSecret) {
         throw new BadRequestException(
           'STRIPE_WEBHOOK_SECRET environment variable is not set',
@@ -142,8 +146,10 @@ export class PaymentsService {
         signature,
         webhookSecret,
       );
+      this.logger.debug(`Webhook validated successfully, event type: ${event.type}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Webhook error: ${errorMessage}`);
       throw new BadRequestException(
         `Webhook signature verification failed: ${errorMessage}`,
       );
