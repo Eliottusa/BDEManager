@@ -76,10 +76,9 @@ export class PaymentsService {
             existingSession.status === 'complete' &&
             existingSession.payment_status === 'paid'
             ) {
-              // TODO : ptt appeler la fonction handleCheckoutSessionPaid
-              throw new BadRequestException(
-                  'Payment already completed',
-              );
+              // Si on retombe ici (ex: webhook non reçu), on resynchronise la DB.
+              await this.handleCheckoutSessionPaid(existingSession);
+              throw new BadRequestException('Payment already completed');
             }
           } catch (error) {
             this.logger.warn(
@@ -298,8 +297,8 @@ export class PaymentsService {
     const payment = await this.getPaymentBySession(session.id);
 
     if (!payment) {
-      this.logger.error(`Payment not found for session ${session.id}`);
-      throw new BadRequestException(`Payment not found for session ${session.id}`);
+      this.logger.error(`Payment not found for paid session ${session.id}`);
+      return;
     }
 
     // Vérifier l'idempotence - ne pas retraiter si déjà payé
@@ -307,6 +306,34 @@ export class PaymentsService {
       this.logger.debug(`Payment ${payment.id} already processed`);
       return;
     }
+
+    //#region Double-check montant/devise (évite de confirmer un paiement incohérent)
+    const expectedAmountCents = Math.round(payment.amount * 100);
+    const sessionAmountCents = session.amount_total ?? null;
+    const sessionCurrency = session.currency ?? null;
+
+    if (sessionAmountCents === null) {
+      this.logger.warn(
+        `Paid session ${session.id} has no amount_total; skipping amount check`,
+      );
+    } else if (sessionAmountCents !== expectedAmountCents) {
+      this.logger.error(
+        `Amount mismatch for payment ${payment.id}: expected=${expectedAmountCents} received=${sessionAmountCents} (session=${session.id})`,
+      );
+      return;
+    }
+
+    if (sessionCurrency === null) {
+      this.logger.warn(
+        `Paid session ${session.id} has no currency; skipping currency check`,
+      );
+    } else if (sessionCurrency.toLowerCase() !== payment.currency.toLowerCase()) {
+      this.logger.error(
+        `Currency mismatch for payment ${payment.id}: expected=${payment.currency} received=${sessionCurrency} (session=${session.id})`,
+      );
+      return;
+    }
+    //#endregion
 
     // Mettre à jour le paiement
     await this.prisma.payment.update({
@@ -330,8 +357,8 @@ export class PaymentsService {
     const payment = await this.getPaymentBySession(session.id);
 
     if (!payment) {
-      this.logger.error(`Payment not found for session ${session.id}`);
-      throw new BadRequestException(`Payment not found for session ${session.id}`);
+      this.logger.error(`Payment not found for failed session ${session.id}`);
+      return;
     }
 
     if (payment.status === 'PAID') {
@@ -354,8 +381,8 @@ export class PaymentsService {
     const payment = await this.getPaymentBySession(session.id);
 
     if (!payment) {
-      this.logger.error(`Payment not found for session ${session.id}`);
-      throw new BadRequestException(`Payment not found for session ${session.id}`);
+      this.logger.error(`Payment not found for expired session ${session.id}`);
+      return;
     }
 
     if (payment.status === 'PENDING') {
