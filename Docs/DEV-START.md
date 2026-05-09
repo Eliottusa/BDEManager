@@ -40,9 +40,13 @@ Après modification de `apps/api/prisma/schema.prisma` :
 docker compose -f docker-compose.dev.yml exec api npm --workspace @bde/api run db:migrate
 ```
 
-## 4) Ouvrir Postgres (optionnel)
+## 4) Seed BDD (optionnel)
 
-Si Compose ne trouve pas le fichier, vérifie que tu es bien dans le dossier du projet :
+```bash
+docker compose -f docker-compose.dev.yml exec api npm --workspace @bde/api run db:seed:reset
+```
+
+## 5) Ouvrir Postgres (optionnel)
 
 ```bash
 docker exec -it bde_postgres_dev psql -U bde -d bdemanager
