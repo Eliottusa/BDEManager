@@ -390,7 +390,7 @@ export class PaymentsService {
       await this.prisma.payment.update({
         where: { id: payment.id },
         data: {
-          status: 'FAILED', // TODO mettre EXPIRED
+          status: 'EXPIRED',
         },
       });
     }
