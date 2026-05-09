@@ -119,20 +119,20 @@ npm run dev
 
 ## Routes API (aperçu)
 
-| Méthode | Route                         | Feature    | Accès     |
-| ------- | ----------------------------- | ---------- | --------- |
-| POST    | `/api/v1/auth/register`       | Auth       | Public    |
-| POST    | `/api/v1/auth/login`          | Auth       | Public    |
-| POST    | `/api/v1/auth/logout`         | Auth       | JWT       |
-| POST    | `/api/v1/auth/refresh`        | Auth       | Public    |
-| GET     | `/api/v1/events`              | Événements | Public    |
-| POST    | `/api/v1/events`              | Événements | ORGANIZER |
-| PATCH   | `/api/v1/events/:id`          | Événements | ORGANIZER |
-| DELETE  | `/api/v1/events/:id`          | Événements | ADMIN     |
-| POST    | `/api/v1/events/:id/register` | Événements | JWT       |
-| POST    | `/api/v1/payments/checkout`   | Paiement   | JWT       |
-| POST    | `/api/v1/payments/webhook`    | Paiement   | Stripe    |
-| GET     | `/api/v1/geo/search?q=`       | Géo        | JWT       |
+| Méthode | Route                                | Feature    | Accès     |
+| ------- | ------------------------------------ | ---------- | --------- |
+| POST    | `/api/v1/auth/register`              | Auth       | Public    |
+| POST    | `/api/v1/auth/login`                 | Auth       | Public    |
+| POST    | `/api/v1/auth/logout`                | Auth       | JWT       |
+| POST    | `/api/v1/auth/refresh`               | Auth       | Public    |
+| GET     | `/api/v1/events`                     | Événements | Public    |
+| POST    | `/api/v1/events`                     | Événements | ORGANIZER |
+| PATCH   | `/api/v1/events/:id`                 | Événements | ORGANIZER |
+| DELETE  | `/api/v1/events/:id`                 | Événements | ADMIN     |
+| POST    | `/api/v1/events/:id/register`        | Événements | JWT       |
+| POST    | `/api/v1/payments/checkout-sessions` | Paiement   | JWT       |
+| POST    | `/api/v1/payments/webhooks/stripe`   | Paiement   | Stripe    |
+| GET     | `/api/v1/geo/search?q=`              | Géo        | JWT       |
 
 ---
 
