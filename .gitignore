@@ -36,6 +36,9 @@ Thumbs.db
 # Turbo
 .turbo/
 
+# Claude Flow
+.claude-flow/
+
 # Test coverage
 coverage/
 

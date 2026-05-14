@@ -13,10 +13,16 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "db:migrate": "turbo run db:migrate --filter=api",
-    "db:studio": "turbo run db:studio --filter=api"
+    "db:migrate": "turbo run db:migrate --filter=@bde/api",
+    "db:studio": "turbo run db:studio --filter=@bde/api"
   },
   "devDependencies": {
+<<<<<<< HEAD
+=======
+    "next": "^15.1.0",
+    "rxjs": "^7.8.1",
+    "turbo": "^2.3.3",
+>>>>>>> main
     "prettier": "^3.4.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
@@ -25,10 +31,16 @@
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
+<<<<<<< HEAD
   "dependencies": {
     "@nestjs/swagger": "^11.4.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "swagger-ui-express": "^5.0.1"
+=======
+  "overrides": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19"
+>>>>>>> main
   }
 }

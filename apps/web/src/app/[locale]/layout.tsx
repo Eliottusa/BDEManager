@@ -2,7 +2,7 @@ import '../globals.css';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/context/AuthContext';
-import Navbar from '@/components/Navbar';
+import NavbarWrapper from '@/components/NavbarWrapper';
 
 export default async function LocaleLayout({
   children,
@@ -18,7 +18,7 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-gray-50">
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
-            <Navbar />
+            <NavbarWrapper />
             {children}
           </AuthProvider>
         </NextIntlClientProvider>

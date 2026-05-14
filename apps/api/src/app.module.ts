@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { CacheModule } from "@nestjs/cache-manager";
-import { MongooseModule } from "@nestjs/mongoose";
 import { redisStore } from "cache-manager-ioredis-yet";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -30,14 +29,6 @@ import { GeoModule } from "./modules/geo/geo.module";
           password: config.get("REDIS_PASSWORD"),
           ttl: config.get<number>("REDIS_TTL", 86400),
         }),
-      }),
-    }),
-
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        uri: config.getOrThrow("MONGO_URI"),
       }),
     }),
 

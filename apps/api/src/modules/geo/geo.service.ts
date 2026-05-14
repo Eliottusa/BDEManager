@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 export interface GeoResult {
   label: string;
@@ -10,8 +11,11 @@ export interface GeoResult {
 
 @Injectable()
 export class GeoService {
+  constructor(private readonly config: ConfigService) {}
+
   async searchAddress(q: string): Promise<GeoResult[]> {
-    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=5`;
+    const base = this.config.get('GEO_API_URL', 'https://api-adresse.data.gouv.fr');
+    const url = `${base}/search/?q=${encodeURIComponent(q)}&limit=5`;
     const response = await fetch(url);
     const data = await response.json();
 
