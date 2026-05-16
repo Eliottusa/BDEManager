@@ -71,7 +71,7 @@ export class EventsService {
     // 1. On vérifie d'abord si l'événement existe
     await this.getEventById(id);
 
-    // 2. Optionnel mais recommandé : Supprimer les inscriptions liées (cascading manuel si non géré dans Prisma)
+    // Supprimer les inscriptions liées (cascading manuel si non géré dans Prisma)
     await this.prisma.registration.deleteMany({
       where: { eventId: id },
     });
