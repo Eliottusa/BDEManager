@@ -5,13 +5,13 @@ import {
   Body,
   Param,
   Patch,
-  ParseIntPipe,
+  Delete,
 } from "@nestjs/common";
 import { EventsService } from "./events.service";
 import { CreateEventDto } from "./dto/create-event.dto";
+import { UpdateEventDto } from "./dto/update-event.dto";
 import { RegisterEventDto } from "./dto/register-event.dto";
 import { UpdateEventStatusDto } from "./dto/update-event-status.dto";
-import { EventStatus } from "@prisma/client";
 
 @Controller("events")
 export class EventsController {
@@ -19,7 +19,6 @@ export class EventsController {
 
   @Post()
   async create(@Body() createEventDto: CreateEventDto) {
-    // On s'assure que la méthode existe dans le service (voir étape 2)
     return this.eventsService.createEvent(createEventDto);
   }
 
@@ -31,6 +30,21 @@ export class EventsController {
   @Get(":id")
   async findOne(@Param("id") id: string) {
     return this.eventsService.getEventById(id);
+  }
+
+  // --- NOUVELLE ROUTE : MODIFICATION D'UN EVENT (PATCH) ---
+  @Patch(":id")
+  async update(
+    @Param("id") id: string,
+    @Body() updateEventDto: UpdateEventDto, // Utilisation du nouveau DTO ici
+  ) {
+    return this.eventsService.updateEvent(id, updateEventDto);
+  }
+
+  // --- NOUVELLE ROUTE : SUPPRESSION D'UN EVENT (DELETE) ---
+  @Delete(":id")
+  async remove(@Param("id") id: string) {
+    return this.eventsService.deleteEvent(id);
   }
 
   @Post(":id/register")

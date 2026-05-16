@@ -47,7 +47,41 @@ export class EventsService {
       },
     });
   }
+  // --- METRE À JOUR UN ÉVÉNEMENT (PATCH) ---
+  async updateEvent(id: string, updateData: any) {
+    // 1. On vérifie d'abord si l'événement existe
+    await this.getEventById(id);
 
+    // 2. On applique les modifications
+    return this.prisma.event.update({
+      where: { id },
+      data: {
+        ...updateData,
+        // On gère la réassignation propre des dates si elles sont fournies
+        ...(updateData.startDate && {
+          startDate: new Date(updateData.startDate),
+        }),
+        ...(updateData.endDate && { endDate: new Date(updateData.endDate) }),
+      },
+    });
+  }
+
+  // --- SUPPRIMER UN ÉVÉNEMENT (DELETE) ---
+  async deleteEvent(id: string) {
+    // 1. On vérifie d'abord si l'événement existe
+    await this.getEventById(id);
+
+    // 2. Optionnel mais recommandé : Supprimer les inscriptions liées (cascading manuel si non géré dans Prisma)
+    await this.prisma.registration.deleteMany({
+      where: { eventId: id },
+    });
+
+    // 3. Suppression de l'événement
+    return this.prisma.event.delete({
+      where: { id },
+    });
+  }
+  // --- UPDATE UN STATUT D'EVENT ---
   async updateStatus(id: string, status: EventStatus) {
     return this.prisma.event.update({
       where: { id },
@@ -58,7 +92,7 @@ export class EventsService {
   // --- GESTION INSCRIPTIONS ---
 
   async registerUser(eventId: string, userId: string) {
-    // 1. Vérifications de base (comme ton code Spring Boot)
+    // 1. Vérifications de base
     const event = await this.getEventById(eventId);
 
     if (event.status !== EventStatus.OUVERT) {
@@ -83,11 +117,11 @@ export class EventsService {
       },
     });
 
-    // 3. Si l'événement est payant, on génère la session Stripe du collègue
+    // 3. Si l'événement est payant, on génère la session Stripe
     if (event.price > 0) {
       return this.paymentsService.createCheckoutSession({
         registrationId: registration.id,
-        // Ici, tu définis où l'utilisateur est redirigé après le paiement
+        // Ici, on définit où l'utilisateur est redirigé après le paiement
         successUrl: `http://localhost:3000/payment/success?registrationId=${registration.id}`,
         cancelUrl: `http://localhost:3000/payment/cancel?registrationId=${registration.id}`,
       });
