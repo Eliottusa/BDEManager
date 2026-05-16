@@ -1,19 +1,29 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import * as bodyParser from 'body-parser';
+import { NestFactory } from "@nestjs/core";
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import { ValidationPipe, VersioningType } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { AppModule } from "./app.module";
+import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import * as bodyParser from "body-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
-  app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+  app.setGlobalPrefix("api");
+  app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle("BDE Manager API")
+    .setDescription("Documentation de l'API BDE")
+    .setVersion("1.0")
+    .addBearerAuth() // Si vous utilisez du JWT plus tard
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup("api/docs", app, document);
 
   app.enableCors({
-    origin: config.get('FRONTEND_URL', 'http://localhost:3000'),
+    origin: config.get("FRONTEND_URL", "http://localhost:3000"),
     credentials: true,
   });
 
@@ -27,7 +37,7 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const port = config.get<number>('PORT', 3001);
+  const port = config.get<number>("PORT", 3001);
 
   /* Stripe webhook middleware
    * Stripe envoie les webhooks avec une signature cryptée.
@@ -40,8 +50,8 @@ async function bootstrap() {
    * On désactive le parsing JSON UNIQUEMENT pour cette route.
    */
   app.use(
-    '/api/v1/payments/webhooks/stripe',
-    bodyParser.raw({ type: 'application/json' }),
+    "/api/v1/payments/webhooks/stripe",
+    bodyParser.raw({ type: "application/json" }),
   );
 
   await app.listen(port);

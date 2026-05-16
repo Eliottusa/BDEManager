@@ -1,16 +1,16 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-ioredis-yet';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './modules/users/users.module';
-import { EventsModule } from './modules/events/events.module';
-import { PaymentsModule } from './modules/payments/payments.module';
-import { MailModule } from './modules/mail/mail.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
-import { GeoModule } from './modules/geo/geo.module';
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { CacheModule } from "@nestjs/cache-manager";
+import { redisStore } from "cache-manager-ioredis-yet";
+import { PrismaModule } from "./prisma/prisma.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { UsersModule } from "./modules/users/users.module";
+import { EventsModule } from "./modules/events/events.module";
+import { PaymentsModule } from "./modules/payments/payments.module";
+import { MailModule } from "./modules/mail/mail.module";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { GeoModule } from "./modules/geo/geo.module";
 
 @Module({
   imports: [
@@ -24,10 +24,10 @@ import { GeoModule } from './modules/geo/geo.module';
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         store: await redisStore({
-          host: config.get('REDIS_HOST', 'localhost'),
-          port: config.get<number>('REDIS_PORT', 6379),
-          password: config.get('REDIS_PASSWORD'),
-          ttl: config.get<number>('REDIS_TTL', 86400),
+          host: config.get("REDIS_HOST", "localhost"),
+          port: config.get<number>("REDIS_PORT", 6379),
+          password: config.get("REDIS_PASSWORD"),
+          ttl: config.get<number>("REDIS_TTL", 86400),
         }),
       }),
     }),

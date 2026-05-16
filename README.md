@@ -111,6 +111,7 @@ npm run db:migrate
 ```bash
 npm run dev
 # API  → http://localhost:3001/api/v1
+# API swagger → http://localhost:3001/api/docs
 # Web  → http://localhost:3000
 # Mail → http://localhost:1080  (MailDev)
 ```

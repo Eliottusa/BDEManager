@@ -16,10 +16,10 @@ enum Role {
 }
 
 enum EventStatus {
-  DRAFT
-  PUBLISHED
-  CANCELLED
-  COMPLETED
+  BROUILLON
+  OUVERT
+  COMPLET
+  ANNULE
 }
 
 enum RegistrationStatus {
@@ -68,7 +68,7 @@ model Event {
   title       String
   description String
   imageUrl    String?
-  status      EventStatus @default(DRAFT)
+  status      EventStatus @default(BROUILLON)
 
   // Location
   addressLabel  String
