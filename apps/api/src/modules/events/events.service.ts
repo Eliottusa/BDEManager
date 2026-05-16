@@ -5,10 +5,14 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EventStatus, RegistrationStatus } from "@prisma/client";
+import { PaymentsService } from "../payments/payments.service";
 
 @Injectable()
 export class EventsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private paymentsService: PaymentsService,
+  ) {}
 
   // --- GESTION EVENTS ---
 
@@ -54,36 +58,46 @@ export class EventsService {
   // --- GESTION INSCRIPTIONS ---
 
   async registerUser(eventId: string, userId: string) {
-    // 1. Vérifier si l'event existe
+    // 1. Vérifications de base (comme ton code Spring Boot)
     const event = await this.getEventById(eventId);
 
-    // 2. Vérifier le status (Attention : ton collègue utilise l'anglais)
     if (event.status !== EventStatus.OUVERT) {
       throw new BadRequestException("Inscriptions fermées pour cet événement");
     }
 
-    // 3. Vérifier la capacité (le champ s'appelle 'capacity' chez ton pote)
     const currentRegistrations = await this.prisma.registration.count({
       where: { eventId },
     });
 
     if (currentRegistrations >= event.capacity) {
-      // On met à jour le statut en COMPLET
-      await this.prisma.event.update({
-        where: { id: eventId },
-        data: { status: EventStatus.COMPLET },
-      });
+      await this.updateStatus(eventId, EventStatus.COMPLET);
       throw new BadRequestException("L'événement est désormais complet");
     }
 
-    // 4. Créer l'inscription (Ici on utilise userId, car c'est une relation vers User)
-    return this.prisma.registration.create({
+    // 2. Création de l'inscription en base
+    const registration = await this.prisma.registration.create({
       data: {
         eventId: eventId,
         userId: userId,
-        status: RegistrationStatus.PENDING, // Valeur par défaut du schéma
+        status: RegistrationStatus.PENDING,
       },
     });
+
+    // 3. Si l'événement est payant, on génère la session Stripe du collègue
+    if (event.price > 0) {
+      return this.paymentsService.createCheckoutSession({
+        registrationId: registration.id,
+        // Ici, tu définis où l'utilisateur est redirigé après le paiement
+        successUrl: `http://localhost:3000/payment/success?registrationId=${registration.id}`,
+        cancelUrl: `http://localhost:3000/payment/cancel?registrationId=${registration.id}`,
+      });
+    }
+
+    // 4. Si c'est gratuit, on retourne juste l'inscription
+    return {
+      message: "Inscription gratuite réussie",
+      registration,
+    };
   }
 
   async getUserRegistrations(userId: string) {
