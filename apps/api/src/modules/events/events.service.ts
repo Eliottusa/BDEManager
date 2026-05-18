@@ -2,16 +2,19 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EventStatus, RegistrationStatus } from "@prisma/client";
 import { PaymentsService } from "../payments/payments.service";
-
+import { MailService } from "../mail/mail.service";
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
   constructor(
     private prisma: PrismaService,
     private paymentsService: PaymentsService,
+    private mailService: MailService,
   ) {}
 
   // --- GESTION EVENTS ---
@@ -117,6 +120,7 @@ export class EventsService {
         userId: userId,
         status: RegistrationStatus.PENDING,
       },
+      include: { user: true },
     });
 
     // 3. Si l'événement est payant, on génère la session Stripe
@@ -130,8 +134,27 @@ export class EventsService {
     }
 
     // 4. Si c'est gratuit, on retourne juste l'inscription
+    try {
+      // On appelle la méthode de ton collègue
+      await this.mailService.sendEventConfirmation(registration.user.email, {
+        firstName: registration.user.firstName || "Étudiant",
+        eventName: event.title,
+        eventDate: event.startDate.toLocaleDateString("fr-FR"),
+        eventLocation:
+          event.addressLabel || event.addressCity || "Non spécifié",
+        actionUrl: `http://localhost:3000/tickets/${registration.id}`,
+      });
+    } catch (mailError) {
+      // Sécurité : Si le serveur de mail crash, on ne veut pas bloquer l'inscription en base !
+      this.logger.warn(
+        `L'inscription ${registration.id} a réussi mais le mail n'a pas pu partir : ${
+          mailError instanceof Error ? mailError.message : "Unknown error"
+        }`,
+      );
+    }
+
     return {
-      message: "Inscription gratuite réussie",
+      message: "Inscription gratuite réussie et mail de confirmation envoyé",
       registration,
     };
   }

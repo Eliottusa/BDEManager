@@ -1,26 +1,35 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
-import Stripe from 'stripe';
-import { PrismaService } from '../../prisma/prisma.service';
-import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
-import { PaymentResponseDto } from './dto/payment-response.dto';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from "@nestjs/common";
+import Stripe from "stripe";
+import { PrismaService } from "../../prisma/prisma.service";
+import { CreateCheckoutSessionDto } from "./dto/create-checkout-session.dto";
+import { PaymentResponseDto } from "./dto/payment-response.dto";
+import { MailService } from "../mail/mail.service";
 
 @Injectable()
 export class PaymentsService {
   private stripe: Stripe;
   private logger = new Logger(PaymentsService.name);
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) {
-      throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
     }
     this.stripe = new Stripe(stripeKey, {
-      apiVersion: '2025-02-24.acacia',
+      apiVersion: "2025-02-24.acacia",
     });
   }
 
   // Crée une session Stripe Checkout et retourne l'URL de paiement
-  async createCheckoutSession( 
+  async createCheckoutSession(
     dto: CreateCheckoutSessionDto,
   ): Promise<PaymentResponseDto> {
     try {
@@ -35,21 +44,22 @@ export class PaymentsService {
       });
 
       if (!registration) {
-        throw new NotFoundException('Registration not found');
+        throw new NotFoundException("Registration not found");
       }
       // #endregion
 
       // Gérer les paiements existants selon leur statut
       if (registration.payment) {
         // Si le paiement est en attente, retourner l'URL existante
-        if (registration.payment.status === 'PENDING') {
+        if (registration.payment.status === "PENDING") {
           try {
             // Vérifier que la session Stripe existe toujours et est valide
-            const existingSession = await this.stripe.checkout.sessions.retrieve(
-              registration.payment.stripeSessionId,
-            );
+            const existingSession =
+              await this.stripe.checkout.sessions.retrieve(
+                registration.payment.stripeSessionId,
+              );
 
-            if (existingSession.status === 'open') {
+            if (existingSession.status === "open") {
               // Vérifier que l'URL est présente et valide
               if (existingSession.url) {
                 return {
@@ -60,39 +70,43 @@ export class PaymentsService {
               } else {
                 // Session ouverte mais sans URL - fermer et en créer une nouvelle
                 try {
-                  await this.stripe.checkout.sessions.expire(existingSession.id);
+                  await this.stripe.checkout.sessions.expire(
+                    existingSession.id,
+                  );
                 } catch (expireError) {
                   this.logger.warn(
                     `Failed to expire session ${existingSession.id}: ${
-                      expireError instanceof Error ? expireError.message : 'Unknown error'
+                      expireError instanceof Error
+                        ? expireError.message
+                        : "Unknown error"
                     }`,
                   );
                 }
               }
             }
-            
+
             // Session terminée et payée
             if (
-            existingSession.status === 'complete' &&
-            existingSession.payment_status === 'paid'
+              existingSession.status === "complete" &&
+              existingSession.payment_status === "paid"
             ) {
               // Si on retombe ici (ex: webhook non reçu), on resynchronise la DB.
               await this.handleCheckoutSessionPaid(existingSession);
-              throw new BadRequestException('Payment already completed');
+              throw new BadRequestException("Payment already completed");
             }
           } catch (error) {
             this.logger.warn(
               `Failed to retrieve existing session, will create new one: ${
-                error instanceof Error ? error.message : 'Unknown error'
+                error instanceof Error ? error.message : "Unknown error"
               }`,
             );
           }
         }
 
         // Si le paiement est confirmé, retourner une erreur
-        if (registration.payment.status === 'PAID') {
+        if (registration.payment.status === "PAID") {
           throw new BadRequestException(
-            'Payment already confirmed for this registration',
+            "Payment already confirmed for this registration",
           );
         }
       }
@@ -103,29 +117,29 @@ export class PaymentsService {
       // #region Verifier les éléments avant de créer un paiement
       // Valider que l'événement n'est pas gratuit
       if (event.isFree || event.price <= 0) {
-        throw new BadRequestException('Cannot create payment for free event');
+        throw new BadRequestException("Cannot create payment for free event");
       }
 
       // Valider le montant
       if (!Number.isFinite(event.price) || event.price <= 0) {
-        throw new BadRequestException('Invalid event price');
+        throw new BadRequestException("Invalid event price");
       }
 
       // Valider l'email utilisateur
       if (!user.email) {
-        throw new BadRequestException('User email is required for payment');
+        throw new BadRequestException("User email is required for payment");
       }
       // #endregion
 
       // #region Créer la session Stripe
       const session = await this.stripe.checkout.sessions.create({
-        mode: 'payment',
+        mode: "payment",
         customer_email: user.email,
         line_items: [
           {
             quantity: 1,
             price_data: {
-              currency: 'eur',
+              currency: "eur",
               unit_amount: Math.round(event.price * 100), // Stripe utilise les centimes
               product_data: {
                 name: event.title,
@@ -135,7 +149,7 @@ export class PaymentsService {
             },
           },
         ],
-        payment_method_types: ['card'],
+        payment_method_types: ["card"],
         success_url: dto.successUrl,
         cancel_url: dto.cancelUrl,
         metadata: {
@@ -153,7 +167,7 @@ export class PaymentsService {
       });
 
       if (!session.url) {
-        throw new BadRequestException('Stripe session URL not available');
+        throw new BadRequestException("Stripe session URL not available");
       }
       // #endregion
 
@@ -167,8 +181,8 @@ export class PaymentsService {
             stripeSessionId: session.id,
             stripePaymentId: null,
             amount: event.price,
-            currency: 'eur',
-            status: 'PENDING',
+            currency: "eur",
+            status: "PENDING",
           },
         });
       } else {
@@ -176,8 +190,8 @@ export class PaymentsService {
           data: {
             stripeSessionId: session.id,
             amount: event.price,
-            currency: 'eur',
-            status: 'PENDING',
+            currency: "eur",
+            status: "PENDING",
             registrationId: registration.id,
             userId: registration.userId,
             eventId: registration.eventId,
@@ -191,30 +205,34 @@ export class PaymentsService {
         url: session.url,
       };
     } catch (error) {
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : '';
-      this.logger.error(`Failed to create checkout session: ${errorMessage}`, errorStack);
-      throw new BadRequestException('Failed to create checkout session');
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : "";
+      this.logger.error(
+        `Failed to create checkout session: ${errorMessage}`,
+        errorStack,
+      );
+      throw new BadRequestException("Failed to create checkout session");
     }
   }
 
   // Traite le webhook Stripe et met à jour le statut du paiement
-  async handleWebhook(
-    rawBody: Buffer,
-    signature: string,
-  ): Promise<void> {
+  async handleWebhook(rawBody: Buffer, signature: string): Promise<void> {
     let event: Stripe.Event;
 
     // #region Valider la signature du webhook
     try {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-      
+
       if (!webhookSecret) {
         throw new BadRequestException(
-          'STRIPE_WEBHOOK_SECRET environment variable is not set',
+          "STRIPE_WEBHOOK_SECRET environment variable is not set",
         );
       }
 
@@ -224,37 +242,39 @@ export class PaymentsService {
         signature,
         webhookSecret,
       );
-      this.logger.debug(`Webhook validated successfully, event type: ${event.type}`);
+      this.logger.debug(
+        `Webhook validated successfully, event type: ${event.type}`,
+      );
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       this.logger.error(`Webhook error: ${errorMessage}`);
       throw new BadRequestException(
         `Webhook signature verification failed: ${errorMessage}`,
       );
     }
-    // #endregion 
+    // #endregion
 
     // #region Traiter les événements Checkout / PaymentIntent
     switch (event.type) {
-      case 'checkout.session.completed':
+      case "checkout.session.completed":
         await this.handleCheckoutSessionCompleted(
           event.data.object as Stripe.Checkout.Session,
         );
         break;
 
-      case 'checkout.session.async_payment_succeeded':
+      case "checkout.session.async_payment_succeeded":
         await this.handleCheckoutSessionAsyncPaymentSucceeded(
           event.data.object as Stripe.Checkout.Session,
         );
         break;
 
-      case 'checkout.session.async_payment_failed':
+      case "checkout.session.async_payment_failed":
         await this.handleCheckoutSessionAsyncPaymentFailed(
           event.data.object as Stripe.Checkout.Session,
         );
         break;
 
-      case 'checkout.session.expired':
+      case "checkout.session.expired":
         await this.handleCheckoutSessionExpired(
           event.data.object as Stripe.Checkout.Session,
         );
@@ -267,8 +287,10 @@ export class PaymentsService {
   }
 
   // Traite l'événement checkout.session.completed
-  private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-    if (session.payment_status !== 'paid') {
+  private async handleCheckoutSessionCompleted(
+    session: Stripe.Checkout.Session,
+  ) {
+    if (session.payment_status !== "paid") {
       this.logger.log(
         `Checkout session ${session.id} completed but not paid yet (payment_status=${session.payment_status})`,
       );
@@ -282,7 +304,7 @@ export class PaymentsService {
   private async handleCheckoutSessionAsyncPaymentSucceeded(
     session: Stripe.Checkout.Session,
   ) {
-    if (session.payment_status !== 'paid') {
+    if (session.payment_status !== "paid") {
       this.logger.warn(
         `Async payment succeeded event received but session ${session.id} is not paid (payment_status=${session.payment_status})`,
       );
@@ -302,7 +324,7 @@ export class PaymentsService {
     }
 
     // Vérifier l'idempotence - ne pas retraiter si déjà payé
-    if (payment.status === 'PAID') {
+    if (payment.status === "PAID") {
       this.logger.debug(`Payment ${payment.id} already processed`);
       return;
     }
@@ -327,7 +349,9 @@ export class PaymentsService {
       this.logger.warn(
         `Paid session ${session.id} has no currency; skipping currency check`,
       );
-    } else if (sessionCurrency.toLowerCase() !== payment.currency.toLowerCase()) {
+    } else if (
+      sessionCurrency.toLowerCase() !== payment.currency.toLowerCase()
+    ) {
       this.logger.error(
         `Currency mismatch for payment ${payment.id}: expected=${payment.currency} received=${sessionCurrency} (session=${session.id})`,
       );
@@ -339,15 +363,60 @@ export class PaymentsService {
     await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
-        status: 'PAID',
-        stripePaymentId: typeof session.payment_intent === 'string'
-          ? session.payment_intent
-          : session.payment_intent?.id,
+        status: "PAID",
+        stripePaymentId:
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id,
       },
     });
 
     // Mettre à jour l'inscription
     await this.confirmPaymentInRegistration(payment.registrationId, payment.id);
+
+    // ENVOI DU MAIL DE CONFIRMATION APPRÈS PAIEMENT REUSSI
+    try {
+      const registrationData = await this.prisma.registration.findUnique({
+        where: { id: payment.registrationId },
+        include: {
+          user: true,
+          event: true,
+        },
+      });
+
+      // On vérifie que les données existent ET qu'on a bien accès au mailService injecté
+      if (
+        registrationData &&
+        registrationData.user &&
+        (this as any).mailService
+      ) {
+        await (this as any).mailService.sendEventConfirmation(
+          registrationData.user.email,
+          {
+            firstName: registrationData.user.firstName || "Étudiant",
+            eventName: registrationData.event.title,
+            eventDate: registrationData.event.startDate
+              ? registrationData.event.startDate.toLocaleDateString("fr-FR")
+              : "Date non spécifiée",
+            eventLocation:
+              registrationData.event.addressLabel ||
+              registrationData.event.addressCity ||
+              "Non spécifié",
+            actionUrl: `http://localhost:3000/tickets/${registrationData.id}`,
+          },
+        );
+
+        this.logger.log(
+          `Mail de confirmation de paiement envoyé avec succès pour l'inscription ${registrationData.id}`,
+        );
+      }
+    } catch (mailError) {
+      this.logger.warn(
+        `Paiement validé, mais échec de l'envoi du mail de confirmation : ${
+          mailError instanceof Error ? mailError.message : "Unknown error"
+        }`,
+      );
+    }
   }
 
   // Traite l'événement checkout.session.async_payment_failed
@@ -361,7 +430,7 @@ export class PaymentsService {
       return;
     }
 
-    if (payment.status === 'PAID') {
+    if (payment.status === "PAID") {
       this.logger.warn(
         `Async payment failed received for already paid payment ${payment.id}`,
       );
@@ -371,7 +440,7 @@ export class PaymentsService {
     await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
-        status: 'FAILED',
+        status: "FAILED",
       },
     });
   }
@@ -385,12 +454,12 @@ export class PaymentsService {
       return;
     }
 
-    if (payment.status === 'PENDING') {
+    if (payment.status === "PENDING") {
       // Mettre à jour le paiement
       await this.prisma.payment.update({
         where: { id: payment.id },
         data: {
-          status: 'EXPIRED',
+          status: "EXPIRED",
         },
       });
     }
@@ -412,20 +481,22 @@ export class PaymentsService {
 
     // Pour dev test Mettre à jour l'inscription avec le statut CONFIRMED
 
-    if (!payment || payment.status !== 'PAID') {
+    if (!payment || payment.status !== "PAID") {
       console.error(`Payment ${paymentId} is not in PAID status`);
       return;
     }
-    
+
     await this.prisma.registration.update({
       where: { id: registrationId },
       data: {
-        status: 'CONFIRMED',
+        status: "CONFIRMED",
         updatedAt: new Date(),
       },
     });
 
-    this.logger.log(`Registration ${registrationId} confirmed after payment ${paymentId}`);
+    this.logger.log(
+      `Registration ${registrationId} confirmed after payment ${paymentId}`,
+    );
   }
 
   // Récupère les informations d'un paiement
