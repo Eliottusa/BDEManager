@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import api from '@/lib/api';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 const schema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
@@ -16,9 +17,11 @@ const schema = z.object({
   endDate: z.string().min(1, 'La date de fin est requise'),
   capacity: z.coerce.number().min(1, 'La capacité doit être d\'au moins 1'),
   price: z.coerce.number().min(0, 'Le prix ne peut pas être négatif'),
-  location: z.string().optional(),
-  lat: z.number().optional(),
-  lon: z.number().optional(),
+  addressLabel: z.string().optional(),
+  addressCity: z.string().optional(),
+  addressZip: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -27,6 +30,7 @@ export default function CreateEventPage() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations('events');
+  const { user } = useAuth();
   const [success, setSuccess] = useState(false);
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -39,7 +43,21 @@ export default function CreateEventPage() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      await api.post('/events', data);
+      await api.post('/events', {
+        title: data.title,
+        description: data.description,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        capacity: data.capacity,
+        price: data.price,
+        isFree: data.price === 0,
+        addressLabel: data.addressLabel || '',
+        addressCity: data.addressCity || '',
+        addressZip: data.addressZip || '',
+        latitude: data.latitude,
+        longitude: data.longitude,
+        organizerId: user?.id,
+      });
       setSuccess(true);
       setTimeout(() => router.push(`/${locale}/events`), 2000);
     } catch (err) {
@@ -120,9 +138,11 @@ export default function CreateEventPage() {
             <AddressAutocomplete
               placeholder="Chercher une adresse..."
               onSelect={(addr) => {
-                setValue('location', addr.label);
-                setValue('lat', addr.lat);
-                setValue('lon', addr.lon);
+                setValue('addressLabel', addr.label);
+                setValue('addressCity', addr.city);
+                setValue('addressZip', addr.postcode);
+                setValue('latitude', addr.lat);
+                setValue('longitude', addr.lon);
               }}
             />
             <p className="mt-2 text-xs text-gray-400 italic">L'adresse s'affichera sur la carte de l'événement.</p>

@@ -9,7 +9,7 @@ import api from '@/lib/api';
 
 interface Registration {
   id: string;
-  event: { id: string; title: string; startDate: string; location?: string };
+  event: { id: string; title: string; startDate: string; addressCity?: string; addressLabel?: string };
 }
 
 interface Notification {
@@ -36,7 +36,7 @@ export default function DashboardPage() {
     }
 
     // Fetch registrations
-    api.get('/events/my-registrations')
+    api.get(`/events/my-registrations?userId=${user?.id}`)
       .then((res) => setRegistrations(Array.isArray(res.data) ? res.data : []))
       .catch(() => {})
       .finally(() => setDataLoading(false));
@@ -125,7 +125,7 @@ export default function DashboardPage() {
                         {new Date(reg.event.startDate).toLocaleDateString(locale, {
                           day: 'numeric', month: 'long', year: 'numeric',
                         })}
-                        {reg.event.location && ` • ${reg.event.location}`}
+                        {(reg.event.addressCity || reg.event.addressLabel) && ` • ${reg.event.addressCity || reg.event.addressLabel}`}
                       </p>
                     </div>
                   </div>

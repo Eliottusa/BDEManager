@@ -35,6 +35,7 @@ export class EventsService {
   }
 
   async createEvent(data: any) {
+    const price = data.price || 0;
     return this.prisma.event.create({
       data: {
         ...data,
@@ -42,7 +43,8 @@ export class EventsService {
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         capacity: data.capacity,
-        price: data.price || 0,
+        price,
+        isFree: data.isFree !== undefined ? data.isFree : price === 0,
         organizerId: data.organizerId,
       },
     });
