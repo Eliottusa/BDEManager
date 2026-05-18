@@ -1,0 +1,5 @@
+-- Rename EventStatus enum values from English to French
+ALTER TYPE "EventStatus" RENAME VALUE 'DRAFT' TO 'BROUILLON';
+ALTER TYPE "EventStatus" RENAME VALUE 'PUBLISHED' TO 'OUVERT';
+ALTER TYPE "EventStatus" RENAME VALUE 'COMPLETED' TO 'COMPLET';
+ALTER TYPE "EventStatus" RENAME VALUE 'CANCELLED' TO 'ANNULE';

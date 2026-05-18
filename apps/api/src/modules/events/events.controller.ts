@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
 } from "@nestjs/common";
 import { EventsService } from "./events.service";
 import { CreateEventDto } from "./dto/create-event.dto";
@@ -25,6 +26,11 @@ export class EventsController {
   @Get()
   async findAll() {
     return this.eventsService.getAllEvents();
+  }
+
+  @Get("my-registrations")
+  async findMyRegistrations(@Query("userId") userId: string) {
+    return this.eventsService.getUserRegistrations(userId);
   }
 
   @Get(":id")
