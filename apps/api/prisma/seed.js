@@ -87,7 +87,7 @@ async function main() {
     data: {
       title: 'Réunion BDE Gratuite',
       description: 'Une réunion gratuite pour discuter des projets futurs',
-      status: 'PUBLISHED',
+      status: 'OUVERT',
       addressLabel: 'Salle de réunion',
       addressStreet: '123 Rue de Paris',
       addressCity: 'Paris',
@@ -108,7 +108,7 @@ async function main() {
     data: {
       title: 'Concert - Billet 15€',
       description: 'Concert étudiant avec bonne ambiance',
-      status: 'PUBLISHED',
+      status: 'OUVERT',
       addressLabel: 'Amphi Principal',
       addressStreet: '456 Avenue de la Paix',
       addressCity: 'Lyon',
@@ -129,7 +129,7 @@ async function main() {
     data: {
       title: 'Atelier Premium - 50€',
       description: 'Atelier intensif avec expert du domaine',
-      status: 'PUBLISHED',
+      status: 'OUVERT',
       addressLabel: 'Salle de formation',
       addressStreet: '789 Boulevard Technologique',
       addressCity: 'Bordeaux',
