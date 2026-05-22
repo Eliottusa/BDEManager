@@ -1,16 +1,14 @@
-import {
-  ConflictException, Inject, Injectable, Logger, UnauthorizedException} from '@nestjs/common';
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
 import { User } from '@prisma/client';
 import { UsersService } from '../users/users.service';
+import { RedisService } from './redis.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
-const REFRESH_TTL = 60 * 60 * 24 * 7; // 7 jours
-const USER_TTL    = 60 * 5;            // 5 minutes
+const REFRESH_TTL = 60 * 60 * 24 * 7 * 1000; // 7 jours en ms
+const USER_TTL    = 60 * 5 * 1000;            // 5 minutes en ms
 
 type SafeUser = Omit<User, 'password'>;
 
@@ -21,7 +19,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    @Inject(CACHE_MANAGER) private readonly cache: Cache,
+    private readonly redis: RedisService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -49,16 +47,13 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    await Promise.all([
-      this.cache.del(`refresh_token:${userId}`),
-      this.cache.del(`user:${userId}`),
-    ]);
+    await this.redis.del(`refresh_token:${userId}`, `user:${userId}`);
   }
 
   async refresh(userId: string, incomingToken: string) {
-    const stored = await this.cache.get<string>(`refresh_token:${userId}`);
+    const stored = await this.redis.get<string>(`refresh_token:${userId}`);
     if (!stored || stored !== incomingToken) {
-      await this.cache.del(`refresh_token:${userId}`);
+      await this.redis.del(`refresh_token:${userId}`);
       throw new UnauthorizedException('Session expirée, veuillez vous reconnecter');
     }
 
@@ -69,7 +64,7 @@ export class AuthService {
   }
 
   async getMe(userId: string): Promise<SafeUser> {
-    const cached = await this.cache.get<SafeUser>(`user:${userId}`);
+    const cached = await this.redis.get<SafeUser>(`user:${userId}`);
     if (cached) {
       this.logger.debug(`Cache HIT user:${userId}`);
       return cached;
@@ -83,7 +78,6 @@ export class AuthService {
     const { password: _, ...safe } = user;
     return safe;
   }
- 
 
   private async buildTokens(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role };
@@ -91,15 +85,15 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_SECRET ?? 'fallback_dev_secret',
-        expiresIn: 900, // 15 min
+        expiresIn: 900,
       }),
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_REFRESH_SECRET ?? 'fallback_dev_refresh_secret',
-        expiresIn: 604800, // 7 jours
+        expiresIn: 604800,
       }),
     ]);
 
-    await this.cache.set(`refresh_token:${user.id}`, refreshToken, REFRESH_TTL);
+    await this.redis.set(`refresh_token:${user.id}`, refreshToken, REFRESH_TTL);
 
     const { password: _, ...safe } = user;
     return { accessToken, refreshToken, user: safe };
@@ -107,6 +101,6 @@ export class AuthService {
 
   private async setUserCache(user: User) {
     const { password: _, ...safe } = user;
-    await this.cache.set(`user:${user.id}`, safe, USER_TTL);
+    await this.redis.set(`user:${user.id}`, safe, USER_TTL);
   }
 }

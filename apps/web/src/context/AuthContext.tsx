@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, AuthState } from '../types/auth';
+import { AuthState } from '../types/auth';
 import api from '../lib/api';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
@@ -24,14 +24,6 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MOCK_USER: User = {
-  id: 'mock-id-123',
-  email: 'test@example.com',
-  firstName: 'Test',
-  lastName: 'User',
-  role: 'USER',
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -42,16 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const locale = useLocale();
 
-  // ── Init : vérifie la session via cookie ──────────────────────────────────
   useEffect(() => {
     const initializeAuth = async () => {
-      if (process.env.NEXT_PUBLIC_MOCK_AUTH === 'true') {
-        setState({ user: MOCK_USER, accessToken: 'mock-token', isAuthenticated: true, isLoading: false });
-        return;
-      }
-
       try {
-        // Le cookie accessToken est envoyé automatiquement par le navigateur
         const res = await api.get('/auth/me');
         setState({ user: res.data, accessToken: null, isAuthenticated: true, isLoading: false });
       } catch {
@@ -62,15 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
-  // ── Login ──────────────────────────────────────────────────────────────────
   const login = async (email: string, password: string) => {
-    if (process.env.NEXT_PUBLIC_MOCK_AUTH === 'true') {
-      setState({ user: MOCK_USER, accessToken: 'mock-token', isAuthenticated: true, isLoading: false });
-      router.push(`/${locale}/dashboard`);
-      return;
-    }
-
-    // Les cookies sont posés par l'API dans la réponse, le navigateur les stocke automatiquement
     const res = await api.post('/auth/login', { email, password });
     setState({ user: res.data.user, accessToken: null, isAuthenticated: true, isLoading: false });
     router.push(`/${locale}/dashboard`);

@@ -19,7 +19,7 @@ interface Notification {
 }
 
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading, accessToken, logout, user } = useAuth();
+  const { isAuthenticated, isLoading, logout, user } = useAuth();
   const t = useTranslations('dashboard');
   const locale = useLocale();
   const router = useRouter();
@@ -41,24 +41,20 @@ export default function DashboardPage() {
       .catch(() => {})
       .finally(() => setDataLoading(false));
 
-    // Socket.io initialization
-    const isMock = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
-    if (!isMock) {
-      const socket: Socket = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001', {
-        auth: { token: accessToken },
-        transports: ['websocket'],
-      });
-      socketRef.current = socket;
+    const socket: Socket = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001', {
+      withCredentials: true,
+      transports: ['websocket'],
+    });
+    socketRef.current = socket;
 
-      socket.on('notification', (notif: Notification) => {
-        setNotifications((prev) => [notif, ...prev]);
-      });
+    socket.on('notification', (notif: Notification) => {
+      setNotifications((prev) => [notif, ...prev]);
+    });
 
-      return () => {
-        socket.disconnect();
-      };
-    }
-  }, [isLoading, isAuthenticated, accessToken, router, locale]);
+    return () => {
+      socket.disconnect();
+    };
+  }, [isLoading, isAuthenticated, router, locale]);
 
   if (isLoading || dataLoading) {
     return (

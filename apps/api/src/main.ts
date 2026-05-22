@@ -4,7 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import * as bodyParser from "body-parser";
+import cookieParser = require('cookie-parser');
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,21 +18,6 @@ async function bootstrap() {
 
   app.enableCors({
     origin: config.get('FRONTEND_URL', 'http://localhost:3000'),
-    credentials: true, // obligatoire pour que les cookies cross-origin fonctionnent
-  app.setGlobalPrefix("api");
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
-
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle("BDE Manager API")
-    .setDescription("Documentation de l'API BDE")
-    .setVersion("1.0")
-    .addBearerAuth() // Si vous utilisez du JWT plus tard
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup("api/docs", app, document);
-
-  app.enableCors({
-    origin: config.get("FRONTEND_URL", "http://localhost:3000"),
     credentials: true,
   });
 
@@ -45,31 +31,22 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const swagger = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('BDE Manager API')
-    .setDescription('API de gestion des événements BDE')
+    .setDescription("API de gestion des événements BDE")
     .setVersion('1.0')
     .addCookieAuth('accessToken')
     .build();
-  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger));
+  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig));
 
-  const port = config.get<number>('PORT', 3001);
-
-  /* Stripe webhook middleware
-   * Stripe envoie les webhooks avec une signature cryptée.
-   * Pour vérifier cette signature, Stripe doit recevoir le BODY EXACT brut.
-   *
-   * Problème :
-   * NestJS transforme automatiquement le JSON -> la signature devient invalide
-   *
-   * Donc :
-   * On désactive le parsing JSON UNIQUEMENT pour cette route.
-   */
+  /* Stripe webhook : bodyParser raw pour conserver le body exact nécessaire
+   * à la vérification de signature cryptographique de Stripe. */
   app.use(
-    "/api/v1/payments/webhooks/stripe",
-    bodyParser.raw({ type: "application/json" }),
+    '/api/v1/payments/webhooks/stripe',
+    bodyParser.raw({ type: 'application/json' }),
   );
 
+  const port = config.get<number>('PORT', 3001);
   await app.listen(port);
   console.log(`API running on http://localhost:${port}/api/v1`);
 }
