@@ -13,7 +13,8 @@ interface Event {
   description: string;
   startDate: string;
   endDate: string;
-  location?: string;
+  addressLabel?: string;
+  addressCity?: string;
   price: number;
   capacity: number;
   imageUrl?: string;
@@ -23,7 +24,7 @@ export default function EventDetailPage() {
   const t = useTranslations('events');
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
   
   const [event, setEvent] = useState<Event | null>(null);
@@ -47,7 +48,7 @@ export default function EventDetailPage() {
 
     setRegistering(true);
     try {
-      const res = await api.post(`/events/${id}/register`);
+      const res = await api.post(`/events/${id}/register`, { userId: user?.id });
       if (res.data.checkoutUrl) {
         window.location.href = res.data.checkoutUrl;
       } else {
@@ -154,7 +155,7 @@ export default function EventDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-gray-900">Lieu</p>
-                  <p className="text-sm text-gray-500">{event.location || 'Lieu à venir'}</p>
+                  <p className="text-sm text-gray-500">{event.addressLabel || event.addressCity || 'Lieu à venir'}</p>
                 </div>
               </li>
 

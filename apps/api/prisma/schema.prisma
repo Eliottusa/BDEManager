@@ -16,10 +16,10 @@ enum Role {
 }
 
 enum EventStatus {
-  DRAFT
-  PUBLISHED
-  CANCELLED
-  COMPLETED
+  BROUILLON
+  OUVERT
+  COMPLET
+  ANNULE
 }
 
 enum RegistrationStatus {
@@ -34,6 +34,7 @@ enum PaymentStatus {
   PAID
   REFUNDED
   FAILED
+  EXPIRED
 }
 
 // ─── Models ─────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ model Event {
   title       String
   description String
   imageUrl    String?
-  status      EventStatus @default(DRAFT)
+  status      EventStatus @default(BROUILLON)
 
   // Location
   addressLabel  String
@@ -119,7 +120,7 @@ model Registration {
 
 model Payment {
   id               String        @id @default(cuid())
-  stripePaymentId  String        @unique
+  stripePaymentId  String?       @unique
   stripeSessionId  String        @unique
   amount           Float
   currency         String        @default("eur")

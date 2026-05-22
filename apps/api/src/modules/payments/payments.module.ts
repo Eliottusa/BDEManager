@@ -1,9 +1,13 @@
-import { Module } from '@nestjs/common';
-import { PaymentsController } from './payments.controller';
-import { PaymentsService } from './payments.service';
+import { Module } from "@nestjs/common";
+import { PrismaModule } from "../../prisma/prisma.module";
+import { PaymentsController } from "./payments.controller";
+import { PaymentsService } from "./payments.service";
+import { MailModule } from "../mail/mail.module";
 
 @Module({
+  imports: [PrismaModule, MailModule],
   controllers: [PaymentsController],
   providers: [PaymentsService],
+  exports: [PaymentsService],
 })
 export class PaymentsModule {}
