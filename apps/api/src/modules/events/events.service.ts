@@ -42,6 +42,10 @@ export class EventsService {
     return this.prisma.event.create({
       data: {
         ...data,
+        addressStreet: data.addressStreet || '',
+        addressLabel: data.addressLabel || '',
+        addressCity: data.addressCity || '',
+        addressZip: data.addressZip || '',
         status: data.status || EventStatus.BROUILLON,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
