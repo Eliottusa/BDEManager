@@ -31,6 +31,7 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
 
   useEffect(() => {
     api.get(`/events/${id}`)
@@ -42,7 +43,8 @@ export default function EventDetailPage() {
   const handleRegister = async () => {
     if (authLoading) return;
     if (!isAuthenticated) {
-      router.push(`/${locale}/auth/login`);
+      setRegisterError('Connectez-vous pour vous inscrire à cet événement.');
+      setTimeout(() => router.push(`/${locale}/auth/login`), 1500);
       return;
     }
 
@@ -55,8 +57,9 @@ export default function EventDetailPage() {
         setSuccess(true);
         setTimeout(() => router.push(`/${locale}/dashboard`), 2000);
       }
-    } catch (err) {
-      console.error('Registration failed', err);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setRegisterError(msg || 'Une erreur est survenue lors de l\'inscription.');
     } finally {
       setRegistering(false);
     }
@@ -173,6 +176,11 @@ export default function EventDetailPage() {
             </ul>
 
             <div className="mt-10">
+               {registerError && (
+                 <div className="mb-4 rounded-xl bg-amber-50 p-3 text-center text-sm text-amber-700 border border-amber-100">
+                   {registerError}
+                 </div>
+               )}
                {success ? (
                  <div className="rounded-xl bg-green-50 p-4 text-center text-sm font-bold text-green-700 border border-green-100">
                     Inscription confirmée ! Redirection...

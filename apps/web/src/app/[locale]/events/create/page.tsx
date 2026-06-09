@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import api from '@/lib/api';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 const schema = z.object({
@@ -30,8 +30,20 @@ export default function CreateEventPage() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations('events');
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      router.push(`/${locale}/auth/login`);
+      return;
+    }
+    if (user?.role === 'USER') {
+      router.push(`/${locale}/events`);
+    }
+  }, [isLoading, isAuthenticated, user, router, locale]);
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -42,6 +54,7 @@ export default function CreateEventPage() {
   });
 
   const onSubmit = async (data: FormData) => {
+    setError(null);
     try {
       await api.post('/events', {
         title: data.title,
@@ -60,8 +73,9 @@ export default function CreateEventPage() {
       });
       setSuccess(true);
       setTimeout(() => router.push(`/${locale}/events`), 2000);
-    } catch (err) {
-      console.error('Failed to create event', err);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setError(msg || 'Une erreur est survenue lors de la création de l\'événement.');
     }
   };
 
@@ -71,6 +85,15 @@ export default function CreateEventPage() {
         <h1 className="text-3xl font-bold text-gray-900">{t('create')}</h1>
         <p className="mt-2 text-gray-500">Remplissez les informations ci-dessous pour publier un nouvel événement.</p>
       </div>
+
+      {error && (
+        <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 flex items-center gap-3">
+          <svg className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+          </svg>
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <section className="rounded-3xl bg-white p-8 shadow-sm border border-gray-100 space-y-6">
