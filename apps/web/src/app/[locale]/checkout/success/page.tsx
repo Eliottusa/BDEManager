@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
+import api from '@/lib/api';
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
@@ -13,11 +14,8 @@ export default function CheckoutSuccessPage() {
 
   useEffect(() => {
     if (!sessionId) { setVerified(false); return; }
-    const token = localStorage.getItem('accessToken');
-    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'}/payments/verify?session_id=${sessionId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((r) => setVerified(r.ok))
+    api.get(`/payments/verify?session_id=${sessionId}`)
+      .then(() => setVerified(true))
       .catch(() => setVerified(false));
   }, [sessionId]);
 

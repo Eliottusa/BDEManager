@@ -1,9 +1,13 @@
+'use client';
+
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 export default function HomePage() {
   const t = useTranslations('nav');
   const locale = useLocale();
+  const { isAuthenticated } = useAuth();
 
   return (
     <main>
@@ -25,10 +29,10 @@ export default function HomePage() {
                 Découvrir les événements
               </Link>
               <Link
-                href={`/${locale}/auth/register`}
+                href={isAuthenticated ? `/${locale}/dashboard` : `/${locale}/auth/register`}
                 className="text-sm font-bold leading-6 text-gray-900 hover:text-blue-600 transition"
               >
-                En savoir plus <span aria-hidden="true">→</span>
+                {isAuthenticated ? 'Mon espace' : 'En savoir plus'} <span aria-hidden="true">→</span>
               </Link>
             </div>
           </div>

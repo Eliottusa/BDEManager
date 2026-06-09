@@ -79,11 +79,6 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          <div className="mt-10">
-            <button className="rounded-xl bg-gray-900 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-black transition transform active:scale-95">
-              {t('edit')}
-            </button>
-          </div>
         </div>
       </div>
     </main>
