@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -17,6 +17,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const t = useTranslations('auth');
+  const locale = useLocale();
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   
@@ -68,7 +69,7 @@ export default function LoginPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-semibold text-gray-700">{t('password')}</label>
-              <a href="#" className="text-xs font-medium text-blue-600 hover:underline">Mot de passe oublié ?</a>
+              <span className="text-xs text-gray-400">Mot de passe oublié ?</span>
             </div>
             <input
               type="password"
@@ -89,7 +90,7 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-gray-500">
             Pas encore de compte ?{' '}
-            <Link href="/auth/register" className="font-bold text-blue-600 hover:underline">
+            <Link href={`/${locale}/auth/register`} className="font-bold text-blue-600 hover:underline">
               {t('register')}
             </Link>
           </p>

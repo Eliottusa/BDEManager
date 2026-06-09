@@ -36,7 +36,8 @@ export default function RegisterPage() {
   const onSubmit = async (data: FormData) => {
     setError(null);
     try {
-      await registerUser(data);
+      const { city: _city, postcode: _postcode, ...registerData } = data;
+      await registerUser(registerData);
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       if (msg === 'Un compte existe déjà avec cet email') {
@@ -123,7 +124,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-gray-500">
             Déjà un compte ?{' '}
-            <Link href="/auth/login" className="font-bold text-blue-600 hover:underline">
+            <Link href={`/${locale}/auth/login`} className="font-bold text-blue-600 hover:underline">
               {t('login')}
             </Link>
           </p>

@@ -10,4 +10,16 @@ const api = axios.create({
   withCredentials: true,
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isAuthEndpoint = error.config?.url?.includes('/auth/');
+    if (error.response?.status === 401 && !isAuthEndpoint && typeof window !== 'undefined') {
+      const locale = window.location.pathname.split('/')[1] ?? 'fr';
+      window.location.href = `/${locale}/auth/login`;
+    }
+    return Promise.reject(error);
+  },
+);
+
 export default api;
