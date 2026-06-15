@@ -5,12 +5,15 @@ import {
   Logger,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
-import { EventStatus, RegistrationStatus } from "@prisma/client";
+import { EventStatus, RegistrationStatus, PaymentStatus } from "@prisma/client";
 import { PaymentsService } from "../payments/payments.service";
 import { MailService } from "../mail/mail.service";
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
+  // Durée de vie d'une inscription PENDING non payée (= expiration session Stripe).
+  // Au-delà, la place est libérée. Doit rester >= au minimum Stripe (30 min).
+  private readonly PENDING_TTL_MS = 30 * 60 * 1000;
   constructor(
     private prisma: PrismaService,
     private paymentsService: PaymentsService,
@@ -75,10 +78,10 @@ export class EventsService {
   // --- METRE À JOUR UN ÉVÉNEMENT (PATCH) ---
   async updateEvent(id: string, updateData: any) {
     // 1. On vérifie d'abord si l'événement existe
-    await this.getEventById(id);
+    const event = await this.getEventById(id);
 
     // 2. On applique les modifications
-    return this.prisma.event.update({
+    const updatedEvent = await this.prisma.event.update({
       where: { id },
       data: {
         ...updateData,
@@ -89,6 +92,31 @@ export class EventsService {
         ...(updateData.endDate && { endDate: new Date(updateData.endDate) }),
       },
     });
+
+    // 3. Si la capacité a changé, vérifier et ajuster le statut
+    if (updateData.capacity !== undefined && updateData.capacity !== event.capacity) {
+      const activeRegistrations = await this.prisma.registration.count({
+        where: {
+          eventId: id,
+          status: {
+            in: [RegistrationStatus.PENDING, RegistrationStatus.CONFIRMED],
+          },
+        },
+      });
+
+      // Si on dépasse la capacité -> COMPLET
+      if (activeRegistrations >= updateData.capacity && updatedEvent.status === EventStatus.OUVERT) {
+        await this.updateStatus(id, EventStatus.COMPLET);
+        updatedEvent.status = EventStatus.COMPLET;
+      }
+      // Si on n'est plus en surcharge -> OUVERT (sauf si c'est un brouillon)
+      else if (activeRegistrations < updateData.capacity && updatedEvent.status === EventStatus.COMPLET) {
+        await this.updateStatus(id, EventStatus.OUVERT);
+        updatedEvent.status = EventStatus.OUVERT;
+      }
+    }
+
+    return updatedEvent;
   }
 
   // --- SUPPRIMER UN ÉVÉNEMENT (DELETE) ---
@@ -159,7 +187,26 @@ export class EventsService {
       // CANCELLED / WAITLISTED : on réactive cette ligne plus bas.
     }
 
-    // 3. Vérification de capacité (places tenues par les inscriptions actives :
+    // 3. Auto-nettoyage : on libère les places des inscriptions PENDING
+    //    abandonnées (paiement jamais finalisé) avant de compter la capacité.
+    //    Filet de sécurité si le webhook Stripe "checkout.session.expired"
+    //    n'arrive pas.
+    //    On ne touche pas un PENDING dont le paiement est déjà PAID (race
+    //    webhook) : il sera confirmé, pas annulé.
+    await this.prisma.registration.updateMany({
+      where: {
+        eventId,
+        status: RegistrationStatus.PENDING,
+        createdAt: { lt: new Date(Date.now() - this.PENDING_TTL_MS) },
+        OR: [
+          { payment: { is: null } },
+          { payment: { is: { status: { not: PaymentStatus.PAID } } } },
+        ],
+      },
+      data: { status: RegistrationStatus.CANCELLED },
+    });
+
+    // 4. Vérification de capacité (places tenues par les inscriptions actives :
     //    on ne compte pas les inscriptions annulées).
     const activeRegistrations = await this.prisma.registration.count({
       where: {
@@ -175,7 +222,7 @@ export class EventsService {
       throw new BadRequestException("L'événement est désormais complet");
     }
 
-    // 4. Création (ou réactivation d'une inscription précédemment annulée).
+    // 5. Création (ou réactivation d'une inscription précédemment annulée).
     //    Event payant -> PENDING (confirmé plus tard par le webhook Stripe).
     //    Event gratuit -> CONFIRMED tout de suite.
     const targetStatus = isPaid
@@ -193,12 +240,12 @@ export class EventsService {
           include: { user: true },
         });
 
-    // 5. Si l'événement est payant, on génère la session Stripe.
+    // 6. Si l'événement est payant, on génère la session Stripe.
     if (isPaid) {
       return this.createPaymentSession(registration.id, eventId);
     }
 
-    // 6. Gratuit : mail de confirmation (non bloquant).
+    // 7. Gratuit : mail de confirmation (non bloquant).
     try {
       await this.mailService.sendEventConfirmation(registration.user.email, {
         firstName: registration.user.firstName || "Étudiant",

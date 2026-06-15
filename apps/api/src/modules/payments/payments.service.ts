@@ -150,6 +150,8 @@ export class PaymentsService {
           },
         ],
         payment_method_types: ["card"],
+        // Expiration courte
+        expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
         success_url: dto.successUrl,
         cancel_url: dto.cancelUrl,
         metadata: {
@@ -445,6 +447,9 @@ export class PaymentsService {
         status: "FAILED",
       },
     });
+
+    // Paiement échoué -> on libère la place réservée par l'inscription PENDING.
+    await this.cancelUnpaidRegistration(payment.registrationId);
   }
 
   // Traite l'événement checkout.session.expired
@@ -464,7 +469,23 @@ export class PaymentsService {
           status: "EXPIRED",
         },
       });
+
+      // Libérer la place : l'inscription PENDING liée n'a jamais été payée,
+      // on l'annule pour qu'elle cesse de compter dans la capacité.
+      await this.cancelUnpaidRegistration(payment.registrationId);
     }
+  }
+
+  // Annule une inscription restée PENDING (paiement expiré / échoué) afin de
+  // libérer la place. Ne touche jamais une inscription déjà CONFIRMED.
+  private async cancelUnpaidRegistration(registrationId: string) {
+    await this.prisma.registration.updateMany({
+      where: { id: registrationId, status: "PENDING" },
+      data: { status: "CANCELLED" },
+    });
+    this.logger.log(
+      `Registration ${registrationId} cancelled (paiement non finalisé) — place libérée`,
+    );
   }
 
   // Confirme le paiement pour l'inscription
