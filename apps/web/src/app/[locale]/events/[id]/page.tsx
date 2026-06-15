@@ -92,8 +92,10 @@ export default function EventDetailPage() {
   const handleRegister = async () => {
     if (authLoading) return;
     if (!isAuthenticated) {
+      // On mémorise la fiche pour y revenir après connexion (au lieu du dashboard).
       setRegisterError('Connectez-vous pour vous inscrire à cet événement.');
-      setTimeout(() => router.push(`/${locale}/auth/login`), 1500);
+      const returnTo = encodeURIComponent(`/${locale}/events/${id}`);
+      setTimeout(() => router.push(`/${locale}/auth/login?redirect=${returnTo}`), 1500);
       return;
     }
 

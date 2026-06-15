@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 
@@ -25,6 +26,9 @@ export default function RegisterPage() {
   const t = useTranslations('auth');
   const locale = useLocale();
   const { register: registerUser } = useAuth();
+  const searchParams = useSearchParams();
+  // Page d'origine à rejoindre après inscription (ex: fiche événement).
+  const redirect = searchParams.get('redirect') ?? undefined;
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -38,7 +42,7 @@ export default function RegisterPage() {
     setError(null);
     try {
       const { city: _city, postcode: _postcode, ...registerData } = data;
-      await registerUser(registerData);
+      await registerUser(registerData, redirect);
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       if (msg === 'Un compte existe déjà avec cet email') {
@@ -125,7 +129,10 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-gray-500">
             Déjà un compte ?{' '}
-            <Link href={`/${locale}/auth/login`} className="font-bold text-blue-600 hover:underline">
+            <Link
+              href={`/${locale}/auth/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
+              className="font-bold text-blue-600 hover:underline"
+            >
               {t('login')}
             </Link>
           </p>
