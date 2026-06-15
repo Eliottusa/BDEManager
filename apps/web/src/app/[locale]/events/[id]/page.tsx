@@ -13,12 +13,29 @@ interface Event {
   description: string;
   startDate: string;
   endDate: string;
+  status?: 'BROUILLON' | 'OUVERT' | 'COMPLET' | 'ANNULE';
   addressLabel?: string;
   addressCity?: string;
   price: number;
   capacity: number;
   imageUrl?: string;
 }
+
+// Inscrit tel que renvoyé par GET /events/:id/registrations (gestionnaires)
+interface Registrant {
+  id: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'WAITLISTED';
+  createdAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string; phone?: string | null };
+  payment?: { status: string } | null;
+}
+
+const REG_STATUS_LABELS: Record<Registrant['status'], { label: string; className: string }> = {
+  CONFIRMED: { label: 'Confirmé', className: 'bg-green-100 text-green-700' },
+  PENDING: { label: 'En attente', className: 'bg-amber-100 text-amber-700' },
+  WAITLISTED: { label: "Liste d'attente", className: 'bg-blue-100 text-blue-700' },
+  CANCELLED: { label: 'Annulé', className: 'bg-gray-200 text-gray-500' },
+};
 
 export default function EventDetailPage() {
   const t = useTranslations('events');
@@ -32,6 +49,14 @@ export default function EventDetailPage() {
   const [registering, setRegistering] = useState(false);
   const [success, setSuccess] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  // Statut d'inscription de l'utilisateur courant pour CET event
+  const [myStatus, setMyStatus] = useState<'none' | 'pending' | 'confirmed' | 'other'>('none');
+  // Liste des inscrits (gestionnaires uniquement)
+  const [registrants, setRegistrants] = useState<Registrant[]>([]);
+
+  const canManage = isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'ORGANIZER');
+  const isFinished = event ? new Date(event.endDate) < new Date() : false;
 
   useEffect(() => {
     api.get(`/events/${id}`)
@@ -40,20 +65,51 @@ export default function EventDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Récupère l'inscription éventuelle de l'utilisateur pour adapter le bouton
+  // (S'inscrire / Finaliser le paiement / Déjà inscrit).
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || !user?.id) return;
+    api.get('/events/my-registrations')
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const reg = list.find((r: any) => r.event?.id === id);
+        if (!reg) setMyStatus('none');
+        else if (reg.status === 'CONFIRMED') setMyStatus('confirmed');
+        else if (reg.status === 'PENDING') setMyStatus('pending');
+        else setMyStatus('other');
+      })
+      .catch(() => {});
+  }, [authLoading, isAuthenticated, user?.id, id]);
+
+  // Charge la liste des inscrits pour les gestionnaires (route sécurisée côté API).
+  useEffect(() => {
+    if (authLoading || !canManage) return;
+    api.get(`/events/${id}/registrations`)
+      .then((res) => setRegistrants(Array.isArray(res.data) ? res.data : []))
+      .catch(() => {});
+  }, [authLoading, canManage, id]);
+
   const handleRegister = async () => {
     if (authLoading) return;
     if (!isAuthenticated) {
+      // On mémorise la fiche pour y revenir après connexion (au lieu du dashboard).
       setRegisterError('Connectez-vous pour vous inscrire à cet événement.');
-      setTimeout(() => router.push(`/${locale}/auth/login`), 1500);
+      const returnTo = encodeURIComponent(`/${locale}/events/${id}`);
+      setTimeout(() => router.push(`/${locale}/auth/login?redirect=${returnTo}`), 1500);
       return;
     }
 
     setRegistering(true);
     try {
-      const res = await api.post(`/events/${id}/register`, { userId: user?.id });
-      if (res.data.checkoutUrl) {
-        window.location.href = res.data.checkoutUrl;
+      // L'API identifie l'utilisateur via le JWT (cookie) : pas de userId en body.
+      const res = await api.post(`/events/${id}/register`);
+      // L'API renvoie l'URL Stripe dans le champ `url` (PaymentResponseDto) pour
+      // un event payant. Si présente, on redirige vers le paiement.
+      const checkoutUrl = res.data?.url ?? res.data?.checkoutUrl;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
       } else {
+        setMyStatus('confirmed');
         setSuccess(true);
         setTimeout(() => router.push(`/${locale}/dashboard`), 2000);
       }
@@ -62,6 +118,21 @@ export default function EventDetailPage() {
       setRegisterError(msg || 'Une erreur est survenue lors de l\'inscription.');
     } finally {
       setRegistering(false);
+    }
+  };
+
+  // Publication d'un brouillon (BROUILLON -> OUVERT) — réservé aux gestionnaires.
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      await api.patch(`/events/${id}/status`, { status: 'OUVERT' });
+      setEvent((prev) => (prev ? { ...prev, status: 'OUVERT' } : prev));
+    } catch (err: any) {
+      setRegisterError(
+        err?.response?.data?.message || 'La publication a échoué.',
+      );
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -127,10 +198,86 @@ export default function EventDetailPage() {
               {event.description}
             </div>
           </section>
+
+          {/* Liste des inscrits — visible uniquement par les gestionnaires */}
+          {canManage && (
+            <section className="mt-8 rounded-3xl bg-white p-8 shadow-sm border border-gray-100">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Inscrits</h2>
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-blue-600">
+                  {registrants.filter((r) => r.status !== 'CANCELLED').length} / {event.capacity}
+                </span>
+              </div>
+              {registrants.length === 0 ? (
+                <p className="text-sm text-gray-500">Aucune inscription pour le moment.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-xs uppercase tracking-wider text-gray-400">
+                        <th className="pb-3 pr-4 font-semibold">Nom</th>
+                        <th className="pb-3 pr-4 font-semibold">Email</th>
+                        <th className="pb-3 pr-4 font-semibold">Téléphone</th>
+                        <th className="pb-3 font-semibold">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {registrants.map((r) => {
+                        const badge = REG_STATUS_LABELS[r.status];
+                        return (
+                          <tr key={r.id}>
+                            <td className="py-3 pr-4 font-medium text-gray-900">
+                              {r.user.firstName} {r.user.lastName}
+                            </td>
+                            <td className="py-3 pr-4 text-gray-500">{r.user.email}</td>
+                            <td className="py-3 pr-4 text-gray-500">{r.user.phone || '—'}</td>
+                            <td className="py-3">
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${badge.className}`}>
+                                {badge.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
         </div>
 
         {/* Sidebar Info & Action */}
         <aside className="space-y-6">
+          {canManage && (
+            <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Gestion</p>
+              {event.status === 'BROUILLON' && (
+                <button
+                  onClick={handlePublish}
+                  disabled={publishing}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50 transition"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {publishing ? 'Publication...' : 'Publier l’événement'}
+                </button>
+              )}
+              <Link
+                href={`/${locale}/events/${id}/edit`}
+                className="flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-6 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100 transition"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Modifier l&apos;événement
+              </Link>
+              <p className="text-center text-xs text-gray-400">
+                Statut : {event.status ?? '—'}{isFinished ? ' · terminé' : ''}
+              </p>
+            </div>
+          )}
           <div className="rounded-3xl bg-white p-8 shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-6">Informations pratiques</h3>
             
@@ -185,6 +332,35 @@ export default function EventDetailPage() {
                  <div className="rounded-xl bg-green-50 p-4 text-center text-sm font-bold text-green-700 border border-green-100">
                     Inscription confirmée ! Redirection...
                  </div>
+               ) : myStatus === 'confirmed' ? (
+                 <div className="space-y-3">
+                   <div className="flex items-center justify-center gap-2 rounded-xl bg-green-50 p-4 text-sm font-bold text-green-700 border border-green-100">
+                     <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                     </svg>
+                     Vous êtes inscrit à cet événement
+                   </div>
+                   <Link href={`/${locale}/dashboard`} className="block text-center text-sm font-semibold text-blue-600 hover:underline">
+                     Voir dans Mon espace
+                   </Link>
+                 </div>
+               ) : isFinished ? (
+                 <div className="rounded-xl bg-gray-100 p-4 text-center text-sm font-bold text-gray-500 border border-gray-200">
+                   Cet événement est terminé
+                 </div>
+               ) : myStatus === 'pending' ? (
+                 <>
+                   <div className="mb-4 rounded-xl bg-amber-50 p-3 text-center text-sm text-amber-700 border border-amber-100">
+                     Paiement en attente — finalisez-le pour confirmer votre place.
+                   </div>
+                   <button
+                     onClick={handleRegister}
+                     disabled={registering}
+                     className="w-full rounded-2xl bg-blue-600 px-6 py-4 text-sm font-bold text-white shadow-xl shadow-blue-600/20 hover:bg-blue-700 disabled:opacity-50 transition transform active:scale-95"
+                   >
+                     {registering ? 'Traitement...' : 'Finaliser le paiement'}
+                   </button>
+                 </>
                ) : (
                  <button
                    onClick={handleRegister}
@@ -194,9 +370,11 @@ export default function EventDetailPage() {
                    {registering ? 'Traitement...' : t('register')}
                  </button>
                )}
-               <p className="mt-4 text-center text-xs text-gray-400">
-                 Paiement sécurisé via Stripe
-               </p>
+               {myStatus !== 'confirmed' && !success && !isFinished && (
+                 <p className="mt-4 text-center text-xs text-gray-400">
+                   Paiement sécurisé via Stripe
+                 </p>
+               )}
             </div>
           </div>
         </aside>

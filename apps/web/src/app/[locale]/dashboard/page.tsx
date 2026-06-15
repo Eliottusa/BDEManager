@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslations, useLocale } from 'next-intl';
@@ -9,6 +10,7 @@ import api from '@/lib/api';
 
 interface Registration {
   id: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'WAITLISTED';
   event: { id: string; title: string; startDate: string; addressCity?: string; addressLabel?: string };
 }
 
@@ -35,9 +37,13 @@ export default function DashboardPage() {
       return;
     }
 
-    // Fetch registrations
-    api.get(`/events/my-registrations?userId=${user?.id}`)
-      .then((res) => setRegistrations(Array.isArray(res.data) ? res.data : []))
+    // Fetch registrations - Mon espace n'affiche que les inscriptions CONFIRMED
+    // (on masque les PENDING : paiements payants non finalisés).
+    api.get('/events/my-registrations')
+      .then((res) => {
+        const all: Registration[] = Array.isArray(res.data) ? res.data : [];
+        setRegistrations(all.filter((reg) => reg.status === 'CONFIRMED'));
+      })
       .catch(() => {})
       .finally(() => setDataLoading(false));
 
@@ -103,10 +109,11 @@ export default function DashboardPage() {
           ) : (
             <ul className="space-y-4">
               {registrations.map((reg) => (
-                <li
-                  key={reg.id}
-                  className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 transition hover:shadow-md"
-                >
+                <li key={reg.id}>
+                  <Link
+                    href={`/${locale}/events/${reg.event.id}`}
+                    className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 transition hover:shadow-md"
+                  >
                   <div className="flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -128,6 +135,7 @@ export default function DashboardPage() {
                   <svg className="h-5 w-5 text-gray-300 transition group-hover:text-blue-400 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                   </svg>
+                  </Link>
                 </li>
               ))}
             </ul>

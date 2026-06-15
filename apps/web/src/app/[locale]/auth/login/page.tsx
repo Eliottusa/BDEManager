@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 const schema = z.object({
@@ -19,8 +20,11 @@ export default function LoginPage() {
   const t = useTranslations('auth');
   const locale = useLocale();
   const { login } = useAuth();
+  const searchParams = useSearchParams();
+  // Page d'origine à rejoindre après connexion (ex: fiche événement).
+  const redirect = searchParams.get('redirect') ?? undefined;
   const [error, setError] = useState<string | null>(null);
-  
+
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
@@ -28,7 +32,7 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     setError(null);
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, redirect);
     } catch (err) {
       setError('Identifiants invalides ou erreur serveur');
     }
@@ -90,7 +94,10 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-gray-500">
             Pas encore de compte ?{' '}
-            <Link href={`/${locale}/auth/register`} className="font-bold text-blue-600 hover:underline">
+            <Link
+              href={`/${locale}/auth/register${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
+              className="font-bold text-blue-600 hover:underline"
+            >
               {t('register')}
             </Link>
           </p>

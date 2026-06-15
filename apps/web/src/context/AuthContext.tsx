@@ -17,8 +17,8 @@ export interface RegisterData {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>;
+  register: (data: RegisterData, redirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -47,17 +47,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  // Cible de redirection après connexion/inscription. On n'accepte qu'un chemin
+  // interne ("/...") pour éviter les open-redirects ; sinon -> dashboard.
+  const resolveRedirect = (target?: string) => {
+    if (target && target.startsWith('/') && !target.startsWith('//')) {
+      return target;
+    }
+    return `/${locale}/dashboard`;
+  };
+
+  const login = async (email: string, password: string, redirectTo?: string) => {
     const res = await api.post('/auth/login', { email, password });
     setState({ user: res.data.user, accessToken: null, isAuthenticated: true, isLoading: false });
-    router.push(`/${locale}/dashboard`);
+    router.push(resolveRedirect(redirectTo));
   };
 
   // ── Register ───────────────────────────────────────────────────────────────
-  const register = async (data: RegisterData) => {
+  const register = async (data: RegisterData, redirectTo?: string) => {
     const res = await api.post('/auth/register', data);
     setState({ user: res.data.user, accessToken: null, isAuthenticated: true, isLoading: false });
-    router.push(`/${locale}/dashboard`);
+    router.push(resolveRedirect(redirectTo));
   };
 
   // ── Logout ─────────────────────────────────────────────────────────────────
