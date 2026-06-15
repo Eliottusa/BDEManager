@@ -41,9 +41,27 @@ export class EventsController {
     return this.eventsService.getUserRegistrations(userId);
   }
 
+  // Liste de gestion (tous les events) — réservée aux gestionnaires.
+  // Déclarée AVANT @Get(":id") pour ne pas être capturée par la route param.
+  @Get("manage")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.ORGANIZER)
+  async findAllForManagement() {
+    return this.eventsService.getManageableEvents();
+  }
+
   @Get(":id")
   async findOne(@Param("id") id: string) {
     return this.eventsService.getEventById(id);
+  }
+
+  // Liste des inscrits d'un événement - réservée aux org/admin.
+  // (Données personnelles : ne doit jamais être public.)
+  @Get(":id/registrations")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.ORGANIZER)
+  async findRegistrations(@Param("id") id: string) {
+    return this.eventsService.getEventRegistrations(id);
   }
 
   // --- MODIFICATION D'UN EVENT (PATCH) — réservé aux gestionnaires ---

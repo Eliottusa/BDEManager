@@ -19,9 +19,25 @@ export class EventsService {
 
   // --- GESTION EVENTS ---
 
+  // Liste PUBLIQUE : uniquement les events publiés (OUVERT / COMPLET) et à venir
+  // (endDate non passée). Les brouillons, annulés et terminés sont exclus.
   async getAllEvents() {
     return this.prisma.event.findMany({
-      include: { organizer: true }, // Optionnel : pour avoir les infos du créateur
+      where: {
+        status: { in: [EventStatus.OUVERT, EventStatus.COMPLET] },
+        endDate: { gte: new Date() },
+      },
+      orderBy: { startDate: "asc" },
+      include: { organizer: true },
+    });
+  }
+
+  // Liste de GESTION (ADMIN / ORGANIZER) : tous les events, y compris brouillons,
+  // annulés et terminés, pour pouvoir les gérer / publier.
+  async getManageableEvents() {
+    return this.prisma.event.findMany({
+      orderBy: { startDate: "asc" },
+      include: { organizer: true },
     });
   }
 
@@ -106,6 +122,11 @@ export class EventsService {
 
     if (event.status !== EventStatus.OUVERT) {
       throw new BadRequestException("Inscriptions fermées pour cet événement");
+    }
+
+    // On ne s'inscrit pas à un événement déjà terminé.
+    if (event.endDate < new Date()) {
+      throw new BadRequestException("Cet événement est terminé");
     }
 
     const isPaid = event.price > 0;
@@ -226,6 +247,32 @@ export class EventsService {
     return this.prisma.registration.findMany({
       where: { userId },
       include: { event: true }, // Pour voir les détails de l'event associé
+    });
+  }
+
+  // Liste des inscrits à un événement — réservée aux gestionnaires (voir guard
+  // sur la route). On ne renvoie que les champs nécessaires de l'utilisateur
+  // (jamais le mot de passe / tokens) et le statut de paiement éventuel.
+  async getEventRegistrations(eventId: string) {
+    await this.getEventById(eventId); // 404 si l'event n'existe pas
+    return this.prisma.registration.findMany({
+      where: { eventId },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+        payment: { select: { status: true } },
+      },
     });
   }
 }
