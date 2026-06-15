@@ -206,7 +206,8 @@ export class EventsService {
         eventDate: event.startDate.toLocaleDateString("fr-FR"),
         eventLocation:
           event.addressLabel || event.addressCity || "Non spécifié",
-        actionUrl: `http://localhost:3000/tickets/${registration.id}`,
+        // Lien du mail : espace personnel (où l'inscription confirmée s'affiche).
+        actionUrl: `${this.frontendUrl()}/fr/dashboard`,
       });
     } catch (mailError) {
       // Sécurité : si le serveur mail crash, on ne bloque pas l'inscription.
@@ -223,14 +224,19 @@ export class EventsService {
     };
   }
 
+  // URL publique du front (Caddy en prod, localhost en dev). Doit matcher
+  // FRONTEND_URL (utilisé aussi pour le CORS) — pas de host en dur.
+  private frontendUrl(): string {
+    return (process.env.FRONTEND_URL || "http://localhost:3000").replace(
+      /\/$/,
+      "",
+    );
+  }
+
   // Génère (ou retrouve) la session Stripe Checkout pour une inscription payante.
   // createCheckoutSession réutilise une session PENDING encore valide.
   private async createPaymentSession(registrationId: string, eventId: string) {
-    // URL publique du front (Caddy en prod, localhost en dev). Doit matcher
-    // FRONTEND_URL (utilisé aussi pour le CORS) — pas de host en dur.
-    const frontendUrl = (
-      process.env.FRONTEND_URL || "http://localhost:3000"
-    ).replace(/\/$/, "");
+    const frontendUrl = this.frontendUrl();
     // L'app est localisée ([locale]) : on cible la locale par défaut.
     const locale = "fr";
     return this.paymentsService.createCheckoutSession({

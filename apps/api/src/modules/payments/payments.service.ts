@@ -402,7 +402,9 @@ export class PaymentsService {
               registrationData.event.addressLabel ||
               registrationData.event.addressCity ||
               "Non spécifié",
-            actionUrl: `http://localhost:3000/tickets/${registrationData.id}`,
+            // Lien du mail : espace personnel (inscription confirmée visible).
+            // FRONTEND_URL (Caddy en prod / localhost en dev) — pas de host en dur.
+            actionUrl: `${(process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")}/fr/dashboard`,
           },
         );
 
