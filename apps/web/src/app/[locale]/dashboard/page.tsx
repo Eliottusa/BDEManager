@@ -9,6 +9,7 @@ import api from '@/lib/api';
 
 interface Registration {
   id: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'WAITLISTED';
   event: { id: string; title: string; startDate: string; addressCity?: string; addressLabel?: string };
 }
 
@@ -35,9 +36,13 @@ export default function DashboardPage() {
       return;
     }
 
-    // Fetch registrations
+    // Fetch registrations - Mon espace n'affiche que les inscriptions CONFIRMED
+    // (on masque les PENDING : paiements payants non finalisés).
     api.get(`/events/my-registrations?userId=${user?.id}`)
-      .then((res) => setRegistrations(Array.isArray(res.data) ? res.data : []))
+      .then((res) => {
+        const all: Registration[] = Array.isArray(res.data) ? res.data : [];
+        setRegistrations(all.filter((reg) => reg.status === 'CONFIRMED'));
+      })
       .catch(() => {})
       .finally(() => setDataLoading(false));
 

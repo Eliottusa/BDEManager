@@ -118,17 +118,23 @@ export class EventsService {
     }
 
     // 2. Création de l'inscription en base
+    // Event payant -> PENDING (confirmé plus tard par le webhook Stripe).
+    // Event gratuit -> CONFIRMED tout de suite : aucun paiement ne viendra le
+    // confirmer, sinon l'inscription resterait PENDING à vie.
+    const isPaid = event.price > 0;
     const registration = await this.prisma.registration.create({
       data: {
         eventId: eventId,
         userId: userId,
-        status: RegistrationStatus.PENDING,
+        status: isPaid
+          ? RegistrationStatus.PENDING
+          : RegistrationStatus.CONFIRMED,
       },
       include: { user: true },
     });
 
     // 3. Si l'événement est payant, on génère la session Stripe
-    if (event.price > 0) {
+    if (isPaid) {
       // URL publique du front (Caddy en prod, localhost en dev). Doit matcher
       // FRONTEND_URL (utilisé aussi pour le CORS) — pas de host en dur.
       const frontendUrl = (
@@ -148,7 +154,6 @@ export class EventsService {
 
     // 4. Si c'est gratuit, on retourne juste l'inscription
     try {
-      // On appelle la méthode de ton collègue
       await this.mailService.sendEventConfirmation(registration.user.email, {
         firstName: registration.user.firstName || "Étudiant",
         eventName: event.title,
