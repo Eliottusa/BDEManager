@@ -69,7 +69,7 @@ export default function EventDetailPage() {
   // (S'inscrire / Finaliser le paiement / Déjà inscrit).
   useEffect(() => {
     if (authLoading || !isAuthenticated || !user?.id) return;
-    api.get(`/events/my-registrations?userId=${user.id}`)
+    api.get('/events/my-registrations')
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : [];
         const reg = list.find((r: any) => r.event?.id === id);
@@ -101,7 +101,8 @@ export default function EventDetailPage() {
 
     setRegistering(true);
     try {
-      const res = await api.post(`/events/${id}/register`, { userId: user?.id });
+      // L'API identifie l'utilisateur via le JWT (cookie) : pas de userId en body.
+      const res = await api.post(`/events/${id}/register`);
       // L'API renvoie l'URL Stripe dans le champ `url` (PaymentResponseDto) pour
       // un event payant. Si présente, on redirige vers le paiement.
       const checkoutUrl = res.data?.url ?? res.data?.checkoutUrl;

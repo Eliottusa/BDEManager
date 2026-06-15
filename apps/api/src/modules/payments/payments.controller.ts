@@ -8,19 +8,26 @@ import {
   BadRequestException,
   NotFoundException,
   RawBodyRequest,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   // POST /api/v1/payments/checkout-sessions
-  // Crée une session Stripe Checkout
+  // Crée une session Stripe Checkout.
+  // Réservé aux utilisateurs connectés : sans garde, n'importe qui pourrait
+  // générer des sessions Stripe à partir d'un registrationId arbitraire et
+  // fournir ses propres success/cancel URLs. Le flux normal passe de toute
+  // façon par /events/:id/register (appel interne au service).
   @Post('checkout-sessions')
+  @UseGuards(JwtAuthGuard)
   async createCheckoutSession(
     @Body() dto: CreateCheckoutSessionDto,
   ): Promise<PaymentResponseDto> {
@@ -28,7 +35,11 @@ export class PaymentsController {
   }
 
   // GET /api/v1/payments/verify?session_id=...
+  // Appelé par la page /checkout/success (utilisateur connecté de retour de
+  // Stripe) -> on exige le JWT pour ne pas exposer publiquement le statut d'un
+  // paiement à partir d'un session_id.
   @Get('verify')
+  @UseGuards(JwtAuthGuard)
   async verifyPayment(
     @Query('session_id') sessionId: string,
   ): Promise<{ verified: boolean }> {

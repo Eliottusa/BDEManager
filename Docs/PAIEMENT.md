@@ -3,11 +3,7 @@
 - Permettre à un utilisateur de payer une inscription à un événement payant via **Stripe Checkout**.
 - Enregistrer l’état du paiement en base (statuts) quand Stripe confirme le paiement.
 
-⚠️ Actuellement, le système est prêt à 90%, sa clôture dépend des modules d'inscription et d'auth (détail en fin de page) ⚠️
-
 ## Schéma de flux (version implémentée)
-
-⚠️ Actuellement, on met à jour l'inscription directe dans le module de paiement, mais le but initial est de call le module d'inscription (voir fin de page + schéma du flux complet sur discord)⚠️
 
 ```mermaid
 sequenceDiagram
@@ -127,23 +123,3 @@ Référence: `apps/api/src/main.ts`
 - `STRIPE_SECRET_KEY`: clé Stripe secrète (obligatoire)
 - `STRIPE_WEBHOOK_SECRET`: secret de webhook (obligatoire)
 - `FRONTEND_URL`: utilisé pour CORS (et recommandé pour dériver success/cancel côté serveur)
-
-## ⚠️ Ce qu’il reste à faire pour "finir” l’intégration
-
-### 1) Connexion Auth
-
-Actuellement, l’endpoint de création de session **n’est pas protégé**.
-À faire:
-
-- Ajouter un guard JWT (et potentiellement des rôles) sur `/payments/checkout-sessions`.
-- ? PTT vérifier que la `Registration.userId` correspond à l’utilisateur connecté.
-
-### 2) Connexion "Service Inscription”
-
-Actuellement, après paiement, on met à jour `Registration.status = CONFIRMED` **directement** via Prisma.
-
-- Si l’architecture cible est "Paiement appelle module Inscription", il faut:
-    - Soit exposer un endpoint du module inscription du style `POST /registrations/:id/confirm-payment`
-    - Soit appeler une méthode de service "RegistrationsService.confirmAfterPayment(...)”
-- Sinon on reste ainsi :
-    - Il faut changer le code payments.service.ts pour utiliser une transaction prisma.

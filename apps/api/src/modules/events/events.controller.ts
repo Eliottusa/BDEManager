@@ -6,18 +6,17 @@ import {
   Param,
   Patch,
   Delete,
-  Query,
   UseGuards,
 } from "@nestjs/common";
 import { Role } from "@prisma/client";
 import { EventsService } from "./events.service";
 import { CreateEventDto } from "./dto/create-event.dto";
 import { UpdateEventDto } from "./dto/update-event.dto";
-import { RegisterEventDto } from "./dto/register-event.dto";
 import { UpdateEventStatusDto } from "./dto/update-event-status.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
 
 @Controller("events")
 export class EventsController {
@@ -36,8 +35,11 @@ export class EventsController {
     return this.eventsService.getAllEvents();
   }
 
+  // Inscriptions de l'utilisateur CONNECTÉ. L'identité vient du JWT, jamais du
+  // client (sinon n'importe qui lirait les inscriptions d'autrui — IDOR).
   @Get("my-registrations")
-  async findMyRegistrations(@Query("userId") userId: string) {
+  @UseGuards(JwtAuthGuard)
+  async findMyRegistrations(@CurrentUser("id") userId: string) {
     return this.eventsService.getUserRegistrations(userId);
   }
 
@@ -83,12 +85,15 @@ export class EventsController {
     return this.eventsService.deleteEvent(id);
   }
 
+  // Inscription à un événement pour l'utilisateur CONNECTÉ. L'identité vient du
+  // JWT : impossible d'inscrire quelqu'un d'autre ni de s'inscrire anonymement.
   @Post(":id/register")
+  @UseGuards(JwtAuthGuard)
   async register(
     @Param("id") id: string,
-    @Body() registerDto: RegisterEventDto,
+    @CurrentUser("id") userId: string,
   ) {
-    return this.eventsService.registerUser(id, registerDto.userId);
+    return this.eventsService.registerUser(id, userId);
   }
 
   // Changement de statut (ouvrir/fermer/etc.) — réservé aux gestionnaires

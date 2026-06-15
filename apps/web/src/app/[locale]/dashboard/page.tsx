@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
     // Fetch registrations - Mon espace n'affiche que les inscriptions CONFIRMED
     // (on masque les PENDING : paiements payants non finalisés).
-    api.get(`/events/my-registrations?userId=${user?.id}`)
+    api.get('/events/my-registrations')
       .then((res) => {
         const all: Registration[] = Array.isArray(res.data) ? res.data : [];
         setRegistrations(all.filter((reg) => reg.status === 'CONFIRMED'));

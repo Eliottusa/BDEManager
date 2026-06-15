@@ -65,28 +65,6 @@ Au démarrage, Stripe CLI affiche un secret `whsec_...` :
 - Cliquer “Payer”
 - Finaliser le paiement sur Stripe Checkout
 
-### Option B - Sans le front (appel API) **ACTUELLEMENT SANS AUTH COMME PAS MIS EN PLACE**
-
-#### 3.B - Appeler l’API avec Postman par exemple
-
-- **Method** : `POST`
-- **URL** : `http://localhost:3001/api/v1/payments/checkout-sessions`
-- Onglet **Headers**
-    - Ajouter : `Content-Type: application/json`
-- Onglet **Body**
-    - Sélectionner `raw`
-    - Sélectionner `JSON`
-    - Coller ce JSON (en remplaçant l’id) :
-        ```json
-        {
-            "registrationId": "COPIE_UN_ID_DU_SEED_ICI",
-            "successUrl": "http://localhost:3000/checkout/success",
-            "cancelUrl": "http://localhost:3000/events"
-        }
-        ```
-
-Réponse attendue : un objet PaymentResponseDto, avec l'url Stripe Checkout. Ouvrir cette URL dans un navigateur.
-
 > Carte de test Stripe : `4242 4242 4242 4242`
 
 ## 4) Vérifier que tout est OK
