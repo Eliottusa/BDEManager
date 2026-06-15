@@ -1,0 +1,18 @@
+# Reverse proxy + HTTPS automatique (Let's Encrypt).
+# Les domaines proviennent du .env.prod (APP_DOMAIN / API_DOMAIN / CADDY_EMAIL).
+
+{
+	email {$CADDY_EMAIL}
+}
+
+# Frontend Next.js
+{$APP_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy web:3000
+}
+
+# API NestJS (REST + WebSocket Socket.io ; Caddy gère l'upgrade automatiquement)
+{$API_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy api:3001
+}

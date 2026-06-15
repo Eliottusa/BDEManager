@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -23,6 +23,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function RegisterPage() {
   const t = useTranslations('auth');
+  const locale = useLocale();
   const { register: registerUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
 

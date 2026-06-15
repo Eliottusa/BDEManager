@@ -1,0 +1,4 @@
+# Les scripts shell exécutés dans les conteneurs Linux doivent rester en LF
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+Caddyfile text eol=lf

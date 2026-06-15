@@ -1,0 +1,26 @@
+# Dépendances et artefacts (réinstallés/recompilés dans l'image)
+**/node_modules
+**/.next
+**/dist
+**/build
+**/out
+**/.turbo
+
+# VCS / IDE / OS
+.git
+.gitignore
+.vscode
+.idea
+**/*.log
+.DS_Store
+Thumbs.db
+
+# Secrets et environnements locaux (jamais dans l'image)
+**/.env
+**/.env.*
+
+# Docs et compose (inutiles au build des images)
+Docs
+docker-compose*.yml
+Dockerfile.dev
+README.md

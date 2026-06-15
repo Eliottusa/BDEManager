@@ -11,8 +11,12 @@ build/
 
 # Environment variables
 .env
+.env.prod
 .env.local
 .env.*.local
+
+# Caddy local CA (test local uniquement)
+caddy-local-root.crt
 
 # Logs
 *.log
