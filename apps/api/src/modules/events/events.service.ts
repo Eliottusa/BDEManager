@@ -129,11 +129,20 @@ export class EventsService {
 
     // 3. Si l'événement est payant, on génère la session Stripe
     if (event.price > 0) {
+      // URL publique du front (Caddy en prod, localhost en dev). Doit matcher
+      // FRONTEND_URL (utilisé aussi pour le CORS) — pas de host en dur.
+      const frontendUrl = (
+        process.env.FRONTEND_URL || "http://localhost:3000"
+      ).replace(/\/$/, "");
+      // L'app est localisée ([locale]) : on cible la locale par défaut.
+      const locale = "fr";
       return this.paymentsService.createCheckoutSession({
         registrationId: registration.id,
-        // Ici, on définit où l'utilisateur est redirigé après le paiement
-        successUrl: `http://localhost:3000/payment/success?registrationId=${registration.id}`,
-        cancelUrl: `http://localhost:3000/payment/cancel?registrationId=${registration.id}`,
+        // Stripe remplace {CHECKOUT_SESSION_ID} par l'id réel de la session.
+        // La page /checkout/success lit ?session_id pour appeler /payments/verify.
+        successUrl: `${frontendUrl}/${locale}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        // Pas de page d'annulation dédiée : retour sur la fiche de l'événement.
+        cancelUrl: `${frontendUrl}/${locale}/events/${eventId}`,
       });
     }
 

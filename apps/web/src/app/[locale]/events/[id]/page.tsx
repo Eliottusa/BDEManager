@@ -51,8 +51,11 @@ export default function EventDetailPage() {
     setRegistering(true);
     try {
       const res = await api.post(`/events/${id}/register`, { userId: user?.id });
-      if (res.data.checkoutUrl) {
-        window.location.href = res.data.checkoutUrl;
+      // L'API renvoie l'URL Stripe dans le champ `url` (PaymentResponseDto) pour
+      // un event payant. Si présente, on redirige vers le paiement.
+      const checkoutUrl = res.data?.url ?? res.data?.checkoutUrl;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
       } else {
         setSuccess(true);
         setTimeout(() => router.push(`/${locale}/dashboard`), 2000);
