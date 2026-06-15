@@ -8,10 +8,18 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
+// Front (app.*) et API (api.*) sont sur des domaines distincts : les requêtes
+// XHR vers l'API sont donc "cross-site". sameSite:'strict'/'lax' empêcherait le
+// navigateur d'envoyer le cookie d'auth -> déconnexion au refresh / 401 sur les
+// routes protégées. En prod (toujours derrière HTTPS via Caddy) on passe en
+// sameSite:'none' + secure:true (obligatoire pour un cookie cross-site). En dev
+// http local (front+api sur localhost, same-site) on garde 'lax' car 'none'
+// exigerait secure:true, impossible sans HTTPS.
+const isProd = process.env.NODE_ENV === 'production';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  secure: isProd,
+  sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
 };
 
 @ApiTags('Auth')
@@ -52,8 +60,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(userId);
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    // Mêmes attributs que la pose, sinon certains navigateurs n'effacent pas.
+    res.clearCookie('accessToken', COOKIE_OPTIONS);
+    res.clearCookie('refreshToken', COOKIE_OPTIONS);
     return { message: 'Déconnecté avec succès' };
   }
 

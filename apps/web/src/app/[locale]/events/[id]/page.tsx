@@ -153,6 +153,17 @@ export default function EventDetailPage() {
 
         {/* Sidebar Info & Action */}
         <aside className="space-y-6">
+          {isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && (
+            <Link
+              href={`/${locale}/events/${id}/edit`}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100 transition"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Modifier l&apos;événement
+            </Link>
+          )}
           <div className="rounded-3xl bg-white p-8 shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-6">Informations pratiques</h3>
             
