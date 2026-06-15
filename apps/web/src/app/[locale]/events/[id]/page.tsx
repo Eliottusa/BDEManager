@@ -32,6 +32,8 @@ export default function EventDetailPage() {
   const [registering, setRegistering] = useState(false);
   const [success, setSuccess] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  // Statut d'inscription de l'utilisateur courant pour CET event
+  const [myStatus, setMyStatus] = useState<'none' | 'pending' | 'confirmed' | 'other'>('none');
 
   useEffect(() => {
     api.get(`/events/${id}`)
@@ -39,6 +41,22 @@ export default function EventDetailPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Récupère l'inscription éventuelle de l'utilisateur pour adapter le bouton
+  // (S'inscrire / Finaliser le paiement / Déjà inscrit).
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || !user?.id) return;
+    api.get(`/events/my-registrations?userId=${user.id}`)
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const reg = list.find((r: any) => r.event?.id === id);
+        if (!reg) setMyStatus('none');
+        else if (reg.status === 'CONFIRMED') setMyStatus('confirmed');
+        else if (reg.status === 'PENDING') setMyStatus('pending');
+        else setMyStatus('other');
+      })
+      .catch(() => {});
+  }, [authLoading, isAuthenticated, user?.id, id]);
 
   const handleRegister = async () => {
     if (authLoading) return;
@@ -57,6 +75,7 @@ export default function EventDetailPage() {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
+        setMyStatus('confirmed');
         setSuccess(true);
         setTimeout(() => router.push(`/${locale}/dashboard`), 2000);
       }
@@ -188,6 +207,31 @@ export default function EventDetailPage() {
                  <div className="rounded-xl bg-green-50 p-4 text-center text-sm font-bold text-green-700 border border-green-100">
                     Inscription confirmée ! Redirection...
                  </div>
+               ) : myStatus === 'confirmed' ? (
+                 <div className="space-y-3">
+                   <div className="flex items-center justify-center gap-2 rounded-xl bg-green-50 p-4 text-sm font-bold text-green-700 border border-green-100">
+                     <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                     </svg>
+                     Vous êtes inscrit à cet événement
+                   </div>
+                   <Link href={`/${locale}/dashboard`} className="block text-center text-sm font-semibold text-blue-600 hover:underline">
+                     Voir dans Mon espace
+                   </Link>
+                 </div>
+               ) : myStatus === 'pending' ? (
+                 <>
+                   <div className="mb-4 rounded-xl bg-amber-50 p-3 text-center text-sm text-amber-700 border border-amber-100">
+                     Paiement en attente — finalisez-le pour confirmer votre place.
+                   </div>
+                   <button
+                     onClick={handleRegister}
+                     disabled={registering}
+                     className="w-full rounded-2xl bg-blue-600 px-6 py-4 text-sm font-bold text-white shadow-xl shadow-blue-600/20 hover:bg-blue-700 disabled:opacity-50 transition transform active:scale-95"
+                   >
+                     {registering ? 'Traitement...' : 'Finaliser le paiement'}
+                   </button>
+                 </>
                ) : (
                  <button
                    onClick={handleRegister}
@@ -197,9 +241,11 @@ export default function EventDetailPage() {
                    {registering ? 'Traitement...' : t('register')}
                  </button>
                )}
-               <p className="mt-4 text-center text-xs text-gray-400">
-                 Paiement sécurisé via Stripe
-               </p>
+               {myStatus !== 'confirmed' && !success && (
+                 <p className="mt-4 text-center text-xs text-gray-400">
+                   Paiement sécurisé via Stripe
+                 </p>
+               )}
             </div>
           </div>
         </aside>

@@ -108,51 +108,76 @@ export class EventsService {
       throw new BadRequestException("Inscriptions fermées pour cet événement");
     }
 
-    const currentRegistrations = await this.prisma.registration.count({
-      where: { eventId },
+    const isPaid = event.price > 0;
+
+    // 2. Inscription déjà existante ? (contrainte unique userId + eventId)
+    //    On ne crée jamais un second enregistrement : on reprend l'existant.
+    const existing = await this.prisma.registration.findUnique({
+      where: { userId_eventId: { userId, eventId } },
     });
 
-    if (currentRegistrations >= event.capacity) {
+    if (existing) {
+      // Déjà confirmée -> on bloque la double inscription.
+      if (existing.status === RegistrationStatus.CONFIRMED) {
+        throw new BadRequestException("Vous êtes déjà inscrit à cet événement");
+      }
+      // En attente -> on REPREND le flux existant au lieu d'en créer un autre.
+      if (existing.status === RegistrationStatus.PENDING) {
+        if (isPaid) {
+          // Le service paiement retrouve la session Stripe encore valide
+          // (ou en régénère une) -> reprise d'un paiement abandonné.
+          return this.createPaymentSession(existing.id, eventId);
+        }
+        // cas improbable : gratuit resté PENDING
+        const confirmed = await this.prisma.registration.update({
+          where: { id: existing.id },
+          data: { status: RegistrationStatus.CONFIRMED },
+        });
+        return { message: "Inscription confirmée", registration: confirmed };
+      }
+      // CANCELLED / WAITLISTED : on réactive cette ligne plus bas.
+    }
+
+    // 3. Vérification de capacité (places tenues par les inscriptions actives :
+    //    on ne compte pas les inscriptions annulées).
+    const activeRegistrations = await this.prisma.registration.count({
+      where: {
+        eventId,
+        status: {
+          in: [RegistrationStatus.PENDING, RegistrationStatus.CONFIRMED],
+        },
+      },
+    });
+
+    if (activeRegistrations >= event.capacity) {
       await this.updateStatus(eventId, EventStatus.COMPLET);
       throw new BadRequestException("L'événement est désormais complet");
     }
 
-    // 2. Création de l'inscription en base
-    // Event payant -> PENDING (confirmé plus tard par le webhook Stripe).
-    // Event gratuit -> CONFIRMED tout de suite : aucun paiement ne viendra le
-    // confirmer, sinon l'inscription resterait PENDING à vie.
-    const isPaid = event.price > 0;
-    const registration = await this.prisma.registration.create({
-      data: {
-        eventId: eventId,
-        userId: userId,
-        status: isPaid
-          ? RegistrationStatus.PENDING
-          : RegistrationStatus.CONFIRMED,
-      },
-      include: { user: true },
-    });
+    // 4. Création (ou réactivation d'une inscription précédemment annulée).
+    //    Event payant -> PENDING (confirmé plus tard par le webhook Stripe).
+    //    Event gratuit -> CONFIRMED tout de suite.
+    const targetStatus = isPaid
+      ? RegistrationStatus.PENDING
+      : RegistrationStatus.CONFIRMED;
 
-    // 3. Si l'événement est payant, on génère la session Stripe
+    const registration = existing
+      ? await this.prisma.registration.update({
+          where: { id: existing.id },
+          data: { status: targetStatus },
+          include: { user: true },
+        })
+      : await this.prisma.registration.create({
+          data: { eventId, userId, status: targetStatus },
+          include: { user: true },
+        });
+
+    // 5. Si l'événement est payant, on génère la session Stripe.
     if (isPaid) {
-      // URL publique du front (Caddy en prod, localhost en dev). Doit matcher
-      // FRONTEND_URL (utilisé aussi pour le CORS) — pas de host en dur.
-      const frontendUrl = (
-        process.env.FRONTEND_URL || "http://localhost:3000"
-      ).replace(/\/$/, "");
-      // L'app est localisée ([locale]) : on cible la locale par défaut.
-      const locale = "fr";
-      return this.paymentsService.createCheckoutSession({
-        registrationId: registration.id,
-        // Stripe remplace {CHECKOUT_SESSION_ID} par l'id réel de la session.
-        // La page /checkout/success lit ?session_id pour appeler /payments/verify.
-        successUrl: `${frontendUrl}/${locale}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-        // Pas de page d'annulation dédiée : retour sur la fiche de l'événement.
-        cancelUrl: `${frontendUrl}/${locale}/events/${eventId}`,
-      });
+      return this.createPaymentSession(registration.id, eventId);
     }
 
-    // 4. Si c'est gratuit, on retourne juste l'inscription
+    // 6. Gratuit : mail de confirmation (non bloquant).
     try {
       await this.mailService.sendEventConfirmation(registration.user.email, {
         firstName: registration.user.firstName || "Étudiant",
@@ -163,7 +188,7 @@ export class EventsService {
         actionUrl: `http://localhost:3000/tickets/${registration.id}`,
       });
     } catch (mailError) {
-      // Sécurité : Si le serveur de mail crash, on ne veut pas bloquer l'inscription en base !
+      // Sécurité : si le serveur mail crash, on ne bloque pas l'inscription.
       this.logger.warn(
         `L'inscription ${registration.id} a réussi mais le mail n'a pas pu partir : ${
           mailError instanceof Error ? mailError.message : "Unknown error"
@@ -175,6 +200,26 @@ export class EventsService {
       message: "Inscription gratuite réussie et mail de confirmation envoyé",
       registration,
     };
+  }
+
+  // Génère (ou retrouve) la session Stripe Checkout pour une inscription payante.
+  // createCheckoutSession réutilise une session PENDING encore valide.
+  private async createPaymentSession(registrationId: string, eventId: string) {
+    // URL publique du front (Caddy en prod, localhost en dev). Doit matcher
+    // FRONTEND_URL (utilisé aussi pour le CORS) — pas de host en dur.
+    const frontendUrl = (
+      process.env.FRONTEND_URL || "http://localhost:3000"
+    ).replace(/\/$/, "");
+    // L'app est localisée ([locale]) : on cible la locale par défaut.
+    const locale = "fr";
+    return this.paymentsService.createCheckoutSession({
+      registrationId,
+      // Stripe remplace {CHECKOUT_SESSION_ID} par l'id réel de la session.
+      // La page /checkout/success lit ?session_id pour appeler /payments/verify.
+      successUrl: `${frontendUrl}/${locale}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      // Pas de page d'annulation dédiée : retour sur la fiche de l'événement.
+      cancelUrl: `${frontendUrl}/${locale}/events/${eventId}`,
+    });
   }
 
   async getUserRegistrations(userId: string) {
