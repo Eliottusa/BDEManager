@@ -34,17 +34,21 @@ RUN apt-get update \
 
 ENV NODE_ENV=production
 
+# --chown=node:node : tout appartient à l'utilisateur non-root "node" (présent dans l'image)
 # node_modules racine : client Prisma généré (.prisma/client) + CLI prisma + deps hoistées
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 # node_modules du workspace api : deps NON hoistées (ex. @nestjs/jwt, @nestjs/passport)
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-COPY apps/api/docker-entrypoint.sh ./apps/api/docker-entrypoint.sh
+COPY --from=builder --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder --chown=node:node /app/apps/api/prisma ./apps/api/prisma
+COPY --chown=node:node apps/api/docker-entrypoint.sh ./apps/api/docker-entrypoint.sh
 
 WORKDIR /app/apps/api
+
+# migrations Prisma + API tournent sous un compte sans privilèges.
+USER node
 EXPOSE 3001
 
 # migrate deploy (+ seed si base vide) puis démarrage
