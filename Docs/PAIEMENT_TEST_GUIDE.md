@@ -58,7 +58,7 @@ Au démarrage, Stripe CLI affiche un secret `whsec_...` :
 
 ## 3) Tester le paiement
 
-### Option A - Avec le front **ACTUELLEMENT IMPOSSIBLE COMME PAS MIS EN PLACE**
+### Option A - Avec le front
 
 - Démarrer le front
 - Aller sur l’inscription d’un événement payant
