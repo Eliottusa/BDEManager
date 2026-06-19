@@ -40,11 +40,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/apps/web ./apps/web
+# --chown=node:node : les fichiers appartiennent à l'utilisateur non-root "node" (déjà présent dans l'image)
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+COPY --from=builder --chown=node:node /app/apps/web ./apps/web
 
 WORKDIR /app/apps/web
+
+# le serveur tourne sous un compte sans privilèges.
+USER node
 EXPOSE 3000
 
 # next start (lit le build .next) - bind 0.0.0.0:3000 par défaut
